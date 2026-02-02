@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkcpp_online_api_docs_prototyp=globalThis.webpackChunkcpp_online_api_docs_prototyp||[]).push([[502],{9668(p){p.exports=JSON.parse('{"name":"docusaurus-plugin-redoc","id":"swagger"}')}}]);

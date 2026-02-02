@@ -1,0 +1,4455 @@
+openapi: 3.0.0
+info:
+  title: Webové služby
+  description: >
+    Tato služba slouží jako **Product Definition API**. Jejím hlavním účelem je
+    poskytovat kompletní technickou a byznysovou definici produktu na základě
+    jeho kódu.
+  version: 1.39.0
+security:
+  - default: []
+tags:
+  - name: Základní informace
+    x-traitTag: true
+    description: >
+      | Atribut | Hodnota |
+
+      | :--- | :--- |
+
+      | **Název služby** | Produktová definice (Product Definition) |
+
+      | **Verze dokumentu** | V1.39.0 |
+
+      | **SUS Plus - Test** |
+      `https://susp-ws-test2.cpp.cz:443/knz-ws/ProduktPodporaWS` |
+
+      | **SUS Plus - Provoz** |
+      `https://susp-ws.cpp.cz:443/knz-ws/ProduktPodporaWS` |
+
+
+      ## Popis služby
+
+      Tento endpoint vrací **kompletní technickou a byznysovou definici
+      produktu** na základě jeho unikátního kódu. 
+
+      ### Klíčové vlastnosti:
+
+      Formát odpovědi: **JSON**.
+
+      * **Účel:** Slouží jako "návod" nebo "šablona" pro klientské aplikace.
+
+      * **Využití v UI:** Na základě dat z tohoto endpointu se dynamicky
+      sestavuje uživatelské rozhraní (např. formulářová pole).
+
+      * **Validace:** Obsahuje pravidla, která aplikace aplikuje pro validaci
+      vstupů od uživatele.
+
+      * **Návaznost:** Připravuje datovou strukturu nezbytnou pro následné
+      volání kalkulačky (výpočet pojistného/ceny).
+  - name: Integrace JSON struktur v SOAP rozhraní
+    x-traitTag: true
+    description: "U nově zaváděných produktů (např. **Domex++**) dochází k evoluci v architektuře odpovědi služby definiceProduktu. Původní koncept, který využíval vnořené XML struktury uvnitř sekcí CDATA, je nahrazován modernějším přístupem, kde je kompletní byznysová definice předávána jako **serializovaný JSON objekt**.\n\n ### Klíčové principy a změny\n Tento „hybridní“ přístup kombinuje stabilitu stávajícího SOAP rozhraní s flexibilitou moderního datového formátu JSON:\n * **Transportní vrstva:** Nadále zůstává zachována XML obálka protokolu SOAP (Envelope/Body).\n *\t**Element <xmlData>:** U produktů využívajících modernizovaný formát je tento element prázdný (často označen jako xsi:nil=\"true\").\n *\t**Nový element <jsonData>:** Tento kontejner nově nese veškerá byznysová data. Obsahuje kompletní serializovaný JSON string se všemi atributy, pravidly a validační logikou produktu.\n \n ### Srovnání datových formátů\n \n #### Původní formát (Legacy XML)\n Starší produkty využívají pro přenos byznysových dat element <xmlData>. Obsah je zabalen do sekce CDATA, aby nedocházelo ke kolizi s parsováním SOAP obálky, a vnitřní struktura je tvořena čistým XML.\n \n ##### Ukázka struktury (Legacy: obecná definice číselníků):\n ```xml\n <S:Envelope xmlns:S=\"http://schemas.xmlsoap.org/soap/envelope/\">\n   <S:Body>\n       <ns2:definiceProduktuResponse xmlns:ns2=\"http://produkt.app.ws.knz.aisservis.cz/\">\n         <definiceProduktu>\n             <xmlData>\n               <![CDATA[<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n               <ciselniky>\n                 <ciselnik typ=\"casove_urceni\">\n                   <polozka hodnota=\"SEZONA\" popis=\"Sezónní pojištění\"/>\n                   <polozka hodnota=\"KRATKODOBE\" popis=\"Krátkodobé pojištění\"/>\n                   <polozka hodnota=\"VYVOZ\" popis=\"Vývoz vozidla mimo území ČR\"/>\n                   <polozka hodnota=\"DOVOZ\" popis=\"Dovoz vozidla z EU a EHP\"/>\n                   <polozka hodnota=\"DOVOLENA\" popis=\"Pojištění na dovolenou\"/>\n                 </ciselnik>\n                 <ciselnik typ=\"frekvence_placeni\">\n                   <polozka hodnota=\"ROCNI\" popis=\"Roční\"/>\n                   <polozka hodnota=\"POLOLETNI\" popis=\"Pololetní\"/>\n                   <polozka hodnota=\"CTVRTLETNI\" popis=\"Čtvrtletní\"/>\n                   <polozka hodnota=\"JEDNORAZOVA\" popis=\"Jednorázová\"/>\n                 </ciselnik>\n                 <ciselnik typ=\"pocet_mesicu_pojisteni\">\n                   <polozka hodnota=\"1\" popis=\"1\"/>\n                   <polozka hodnota=\"2\" popis=\"2\"/>\n                   <polozka hodnota=\"12\" popis=\"12\"/>\n                 </ciselnik>\n               </ciselniky>]]>\n             </xmlData>\n             <verze>1.0</verze>\n         </definiceProduktu>\n       </ns2:definiceProduktuResponse>\n   </S:Body>\n </S:Envelope>\n ```\n \n #### Nový formát (JSON v SOAP)\n U nových produktů je element `<xmlData>` prázdný a veškerá byznysová logika je přesunuta do strukturovaného JSON objektu v elementu `<jsonData>`.\n \n ##### Ukázka struktury (Domex++):\n\n ```xml\n     <xmlData>\n       <S:Envelope xmlns:S=\"http://schemas.xmlsoap.org/soap/envelope/\">\n   <S:Body>\n     <ns2:definiceProduktuResponse xmlns:ns2=\"http://produkt.app.ws.knz.aisservis.cz/\">\n       <definiceProduktu>\n           <xmlData xsi:nil=\"true\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"/>\n           <verze>1.31.0</verze>\n           <jsonData>\n           {\n             \"product\": {\n               \"businessProductCode\": \"Domex\",\n               \"premiumCalculationBase\": \"R\",\n               \"inceptionDateAndTimeRules\": {\n                 \"variableInceptionDateAllowed\": false,\n                 \"retroactiveInceptionDateAllowed\": false,\n                 \"methodForInception\": \"1\"\n               },\n               \"policy\": {\n                 \"inceptionDateInput\": {\n                   \"mandatory\": { \"default\": true },\n                   \"type\": \"datetime\"\n                 }\n               }\n             }\n           }\n           </jsonData>\n       </definiceProduktu>\n     </ns2:definiceProduktuResponse>\n   </S:Body>\n       </S:Envelope>\n     </xmlData>\n ```\n"
+  - name: Technologie a způsob volání
+    x-traitTag: true
+    description: >
+      Služba ProduktPodpora (Product Definition API) je navržena jako robustní
+      rozhraní pro poskytování kompletních technických a byznysových definic
+      pojistných produktů. Tato kapitola popisuje standardní protokol a nezbytné
+      parametry pro úspěšné volání služby.  
+
+      ## Typ volání (SOAP)
+
+      Na rozdíl od standardních **REST** endpointů využívá tato služba pro
+      komunikaci protokol **SOAP**
+
+      * Formát dat: Veškerá data jsou přenášena výhradně v XML formátu.
+
+      * Zapouzdření: Data jsou zasílána v rámci standardní XML obálky uvnitř
+      elementu `soapenv:Envelope`.
+
+      ## Autentizace
+
+      Služba nevyužívá pro ověření identity standardní HTTP hlavičky (např.
+      Bearer token nebo Basic Auth). Autentizace je implementována přímo v
+      hlavičce XML obálky `<soapenv:Header>`.
+
+      V každém požadavku musí být přítomen element ws_ucet, který obsahuje:
+
+      * jmeno: Přihlašovací jméno přidělené správcem systému.
+
+      * heslo: Heslo odpovídající danému účtu.
+
+      ##### Příklad autentizační hlavičky:
+
+
+      ```xml
+
+      <soapenv:Header>
+       <prod:ws_ucet xmlns:prod="http://produkt.app.ws.knz.aisservis.cz/">
+         <jmeno>UŽIVATELSKÉ_JMÉNO</jmeno>
+         <heslo>HESLO</heslo>
+       </prod:ws_ucet>
+      </soapenv:Header>
+
+
+      ```
+
+      ## Struktura požadavku (Body)
+
+      Samotné byznysové volání metody (např. definiceProduktu) se nachází v
+      části `<soapenv:Body>`.
+
+      ##### Příklad requestu:
+
+      ```xml
+       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:prod="http://produkt.app.ws.knz.aisservis.cz/">
+       <soapenv:Header>
+       <prod:ws_ucet>
+       <jmeno>UŽIVATELSKÉ_JMÉNO</jmeno>
+       <heslo>HESLO</heslo>
+       </prod:ws_ucet>
+       </soapenv:Header>
+       <soapenv:Body>
+       <prod:definiceProduktu>
+       <kod>D01</kod>
+       <nadrazena_smlouva>N0001</nadrazena_smlouva>
+       </prod:definiceProduktu>
+       </soapenv:Body>
+       </soapenv:Envelope>
+      ```
+
+      ## Technické požadavky na HTTP klienta
+
+      Při implementaci volání je nutné zajistit, aby HTTP klient korektně
+      nastavil následující parametry, jinak bude požadavek serverem odmítnut:
+
+      Content-Type: Musí být nastaven na `text/xml;charset=UTF-8`.
+  - name: Metóda definiceProduktu
+paths:
+  /ws/product-definitions/{bpCode}:
+    get:
+      tags:
+        - Metóda definiceProduktu
+      summary: Metóda definiceProduktu
+      description: |
+        Pre ziskanie produktu vola api product-service-api 
+        /product-definitions/new-contract/{bpCode} v 8.0.74
+      operationId: product-definition
+      parameters:
+        - name: bpCode
+          in: path
+          description: Business product code
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+        - name: bpVariant
+          in: query
+          description: More granular selection for PD
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: string
+        - name: bpVersion
+          in: query
+          description: Business product version
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: get product-definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDefinitionResponsePD'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ItemNotFound'
+        '422':
+          description: >-
+            Request je syntakticky OK, ale vyskytla se chyba za běhu (
+            nesouhlasí typ operandu, dělení nulou, atd. )
+        '429':
+          description: >-
+            Service je přetížena, aktuální request je ignorován, zkuste to za
+            chvíli znovu
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+      description: Výčet chybových hlášek
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Kód chyby
+        title:
+          type: string
+          description: Hlavní název chybové hlášky
+        detail:
+          type: string
+          description: Podrobný popis chybové hlášky
+        source:
+          type: string
+          description: Identifikace objektu vázaného k chybě
+        meta:
+          type: object
+          additionalProperties:
+            type: string
+          description: Dodatečné informace k chybě ve formě mapy
+      description: Struktura obsahující informace o chybě
+    ContractDocumentsResponse:
+      required:
+        - bpCode
+        - contractNumber
+        - documentFiles
+      type: object
+      properties:
+        contractNumber:
+          type: string
+        bpCode:
+          type: string
+        bpVersion:
+          type: string
+        tpCode:
+          type: string
+        documentFiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractDocumentFile'
+    ContractDocumentResponse:
+      required:
+        - bpCode
+        - contractNumber
+        - documentFile
+      type: object
+      properties:
+        contractNumber:
+          type: string
+        bpCode:
+          type: string
+        bpVersion:
+          type: string
+        tpCode:
+          type: string
+        documentFile:
+          $ref: '#/components/schemas/ContractDocumentFile'
+    ContractDocumentFile:
+      required:
+        - documentCode
+        - documentId
+        - documentName
+        - fileName
+        - fileUrl
+        - mimeType
+      type: object
+      properties:
+        documentCode:
+          type: string
+          description: Kód dokumentu
+        documentName:
+          type: string
+          description: Název dokumentu
+        documentId:
+          type: string
+          description: ID dokumentu
+          format: $uuid
+        fileName:
+          type: string
+          description: Název souboru
+        mimeType:
+          type: string
+          description: MIME typ souboru
+        fileUrl:
+          type: string
+          description: URL na online podobu dokument
+    CalculationRequest:
+      required:
+        - bpVariant
+        - code
+        - productRequest
+        - version
+      type: object
+      properties:
+        code:
+          type: string
+        version:
+          type: string
+        bpVariant:
+          type: string
+          description: >-
+            Business Product Variant, pokud není vyplněno, hledá se záznam s
+            pbVariant = null
+        calculationType:
+          type: string
+          enum:
+            - STANDARD
+            - VARIANT
+        testValidation:
+          type: boolean
+        productRequest:
+          $ref: '#/components/schemas/ProductDefinitionRequest'
+        calculationId:
+          type: string
+      description: Požadavek na kalkulaci zvoleného produktu
+    CalculationResponse:
+      required:
+        - code
+        - productRequest
+        - status
+        - technicalProductCode
+        - version
+      type: object
+      properties:
+        code:
+          type: string
+        version:
+          type: string
+        bpVariant:
+          type: string
+          description: >-
+            Business Product Variant, pokud není vyplněno, hledá se záznam s
+            pbVariant = null
+        technicalProductCode:
+          type: string
+        calculationId:
+          type: string
+        status:
+          type: string
+        productResponse:
+          $ref: '#/components/schemas/ProductDefinitionResponse'
+        modelationResponseValidation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        modelationResponseLov:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lov'
+        substitutedPoliciesResponse:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubstitutedPoliciesResponse'
+        error:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+      description: >-
+        Odpověď kalkulace, která obsahuje status, výsledné parametry a případné
+        validační hlášky
+    Validation:
+      required:
+        - severity
+        - valType
+      type: object
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+        valType:
+          type: string
+        message:
+          type: string
+        object:
+          type: string
+        technicalNote:
+          type: string
+        taxCode:
+          type: string
+    ProductDefinitionRequest:
+      type: object
+      properties:
+        version:
+          $ref: '#/components/schemas/FieldString'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString'
+        policy:
+          $ref: '#/components/schemas/PolicyBody'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        insuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuranceLocation'
+        productPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner'
+        productDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge'
+        insuredObject:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuredObject'
+        subtotal:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtotalRequest'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest'
+        registeredBusinessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegisteredBusinessActivityRequest'
+    PolicyBody:
+      type: object
+      properties:
+        proposalPresentationDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        proposalAcceptanceReminderDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        inceptionDateInput:
+          $ref: '#/components/schemas/FieldDatetime'
+        terminationDateInput:
+          $ref: '#/components/schemas/FieldDatetime'
+        conclusionDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        contractualDocumentationCreationDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        coveragePeriod:
+          $ref: '#/components/schemas/FieldCode'
+        paymentFrequency:
+          $ref: '#/components/schemas/FieldCode'
+        arrangementChannel:
+          $ref: '#/components/schemas/FieldCode'
+        methodConcludingContract:
+          $ref: '#/components/schemas/FieldCode'
+        arrangementType:
+          $ref: '#/components/schemas/FieldCode'
+        negotiationWay:
+          $ref: '#/components/schemas/FieldCode'
+        paymentMethod:
+          $ref: '#/components/schemas/FieldCode'
+        fixationFromDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        automaticProlongation:
+          $ref: '#/components/schemas/FieldBoolean'
+        indexation:
+          $ref: '#/components/schemas/FieldBoolean'
+        variableInceptionDate:
+          $ref: '#/components/schemas/FieldBoolean'
+        retroactiveInceptionDate:
+          $ref: '#/components/schemas/FieldBoolean'
+        voucher:
+          $ref: '#/components/schemas/FieldCode'
+        classifiedContractData:
+          $ref: '#/components/schemas/FieldBoolean'
+        yearNumber:
+          $ref: '#/components/schemas/FieldNumber'
+        targetGroup:
+          $ref: '#/components/schemas/FieldCode'
+        premiumEmployerContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        delayPeriodTransferContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+    Premium:
+      type: object
+      properties:
+        id:
+          type: string
+        aliquotPremiumBeforeDiscount:
+          type: number
+        aliquotPremiumAfterDiscount:
+          type: number
+        calculatedPremiumBeforeDiscount:
+          type: number
+        calculatedPremiumAfterDiscount:
+          type: number
+        annualPremiumBeforeDiscount:
+          type: number
+        annualPremiumAfterDiscount:
+          type: number
+        periodPremiumAfterDiscount:
+          type: number
+        firstPeriodPremium:
+          type: number
+    Premium2:
+      allOf:
+        - $ref: '#/components/schemas/Premium'
+        - type: object
+          properties:
+            calculatedPremiumBeforeEntityDiscount:
+              type: number
+            calculatedPremiumAfterEntityDiscount:
+              type: number
+    Premium3:
+      allOf:
+        - $ref: '#/components/schemas/Premium'
+        - type: object
+          properties:
+            calculatedPremiumBeforeEntityDiscount:
+              type: number
+            calculatedPremiumAfterEntityDiscount:
+              type: number
+            proposalAcceptancePremium:
+              type: number
+    DiscountSurcharge:
+      type: object
+      properties:
+        code:
+          type: string
+        selectedValue:
+          $ref: '#/components/schemas/FieldNumber'
+        selectedValuePercent:
+          $ref: '#/components/schemas/FieldNumber'
+    InsuranceLocation:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        locationSpecification:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSpecification'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest'
+    InsuranceLocationResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        locationSpecification:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSpecification'
+        insuranceLocationLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse'
+    LocationSpecification:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    ProductPartner:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        partnerRole:
+          type: string
+        businessPartnerCode:
+          $ref: '#/components/schemas/FieldString'
+        businessAuthorization:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessAuthorizationRequest'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        characteristics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        gradings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    ProductPartnerResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        businessPartnerCode:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorization:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessAuthorizationResponse'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        characteristics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        gradings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    InsuredObject:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        superiorLinkUuid:
+          $ref: '#/components/schemas/FieldString'
+        indexation:
+          $ref: '#/components/schemas/FieldBoolean'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        relatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner'
+        businessRiskPackage:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPackage'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRisk'
+        objectInsuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuredObjectLocation'
+        insuredObjectDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest'
+    InsuredObjectLocation:
+      type: object
+      properties:
+        code:
+          type: string
+        locationLinkUuid:
+          type: string
+    BusinessRiskPackage:
+      type: object
+      properties:
+        code:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        packageRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskPackage'
+        businessRiskPackageDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    RiskPackage:
+      type: object
+      properties:
+        businessRiskCode:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    BusinessRisk:
+      type: object
+      properties:
+        businessRiskCode:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        businessRiskDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge'
+        businessRiskRelatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest'
+    Field:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    FieldString:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: string
+              description: Hodnota pole jako string
+    FieldCode:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: string
+              description: Hodnota pole jako code z číselníku
+    FieldBoolean:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: boolean
+              description: Hodnota pole jako celé boolean
+    FieldInteger:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: integer
+              description: Hodnota pole jako celé číslo
+    FieldNumber:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: number
+              description: Hodnota pole jako desetinné číslo
+    FieldDatetime:
+      allOf:
+        - $ref: '#/components/schemas/Field'
+        - type: object
+          properties:
+            value:
+              type: string
+              description: Hodnota pole jako datum a čas
+              format: date-time
+    FieldWithFID:
+      type: object
+      properties:
+        fid:
+          type: string
+          description: ID pole pro sjednávač bez tečkové notace
+        id:
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        type:
+          type: string
+          enum:
+            - string
+            - integer
+            - number
+            - boolean
+            - lov
+            - datetime
+            - date
+        value:
+          $ref: '#/components/schemas/FieldWithIdValue'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    FieldValidationResult:
+      type: object
+      properties:
+        id:
+          type: string
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    ProductDefinitionResponse:
+      type: object
+      properties:
+        version:
+          $ref: '#/components/schemas/FieldString'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString'
+        policy:
+          $ref: '#/components/schemas/PolicyResponse'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        insuredObject:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectResponse'
+        premium:
+          $ref: '#/components/schemas/Premium3'
+        productPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse'
+        insuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuranceLocationResponse'
+        productLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+        attachment:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        subtotal:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtotalResponse'
+        productDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse'
+        registeredBusinessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegisteredBusinessActivityResponse'
+    PolicyResponse:
+      type: object
+      properties:
+        proposalPresentationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        inceptionDateInput:
+          $ref: '#/components/schemas/FieldValidationResult'
+        inceptionDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        terminationDateInput:
+          $ref: '#/components/schemas/FieldValidationResult'
+        terminationDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        proposalAcceptanceDeadline:
+          $ref: '#/components/schemas/FieldDatetime'
+        legislationVersion:
+          $ref: '#/components/schemas/FieldCode'
+        annualDay:
+          $ref: '#/components/schemas/FieldNumber'
+        annualMonth:
+          $ref: '#/components/schemas/FieldNumber'
+        conclusionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        contractualDocumentationCreationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        coveragePeriod:
+          $ref: '#/components/schemas/FieldValidationResult'
+        paymentFrequency:
+          $ref: '#/components/schemas/FieldValidationResult'
+        arrangementChannel:
+          $ref: '#/components/schemas/FieldValidationResult'
+        methodConcludingContract:
+          $ref: '#/components/schemas/FieldValidationResult'
+        arrangementType:
+          $ref: '#/components/schemas/FieldValidationResult'
+        negotiationWay:
+          $ref: '#/components/schemas/FieldValidationResult'
+        paymentMethod:
+          $ref: '#/components/schemas/FieldValidationResult'
+        fixationFromDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        automaticProlongation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        indexation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        variableInceptionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        retroactiveInceptionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        voucher:
+          $ref: '#/components/schemas/FieldValidationResult'
+        classifiedContractData:
+          $ref: '#/components/schemas/FieldValidationResult'
+        yearNumber:
+          $ref: '#/components/schemas/FieldValidationResult'
+        targetGroup:
+          $ref: '#/components/schemas/FieldValidationResult'
+        taxAllowancesPolicy:
+          $ref: '#/components/schemas/FieldBoolean'
+        coveragePeriodOutput:
+          $ref: '#/components/schemas/FieldCode'
+        premiumEmployerContracted:
+          $ref: '#/components/schemas/FieldValidationResult'
+        delayPeriodTransferContracted:
+          $ref: '#/components/schemas/FieldValidationResult'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        obligationContractPublication:
+          $ref: '#/components/schemas/FieldBoolean'
+        proposalAcceptanceReminderDate:
+          $ref: '#/components/schemas/FieldDatetime'
+    ObjectResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        superiorLinkUuid:
+          $ref: '#/components/schemas/FieldValidationResult'
+        indexation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        version:
+          $ref: '#/components/schemas/FieldString'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        premium:
+          $ref: '#/components/schemas/Premium2'
+        businessRiskPackage:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPackageResponse'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskResponse'
+        insuredObjectDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse'
+        insuredObjectLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        attachment:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        relatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse'
+    BusinessRiskResponse:
+      type: object
+      properties:
+        businessRiskCode:
+          type: string
+        validFrom:
+          $ref: '#/components/schemas/FieldDatetime'
+        validTo:
+          $ref: '#/components/schemas/FieldDatetime'
+        territorialValidityLargeArea:
+          $ref: '#/components/schemas/FieldCode'
+        version:
+          $ref: '#/components/schemas/FieldString'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString'
+        businessRiskRelatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        premium:
+          $ref: '#/components/schemas/Premium2'
+        businessRiskDecomposition:
+          type: array
+          items:
+            $ref: '#/components/schemas/ElementaryRiskResponse'
+        businessRiskLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+        businessRiskDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+    DiscountSurchargeResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        calculatedValue:
+          $ref: '#/components/schemas/FieldNumber'
+        calculatedValuePercent:
+          $ref: '#/components/schemas/FieldNumber'
+        discountMinimumPremium:
+          $ref: '#/components/schemas/FieldNumber'
+        aliquotDiscount:
+          type: number
+        calculatedDiscount:
+          type: number
+        annualDiscount:
+          type: number
+        selectedValue:
+          $ref: '#/components/schemas/FieldValidationResult'
+        selectedValuePercent:
+          $ref: '#/components/schemas/FieldValidationResult'
+        bonusSchemeLevel:
+          $ref: '#/components/schemas/FieldNumber'
+        entitledDiscount:
+          $ref: '#/components/schemas/FieldBoolean'
+    ElementaryRiskResponse:
+      type: object
+      properties:
+        elementaryRiskCode:
+          type: string
+        premium:
+          $ref: '#/components/schemas/Premium'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        deductible:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeductibleResponse'
+        businessRiskDecompositionLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+        taxAllowancesElementaryRisk:
+          $ref: '#/components/schemas/FieldCode'
+        layer:
+          type: array
+          items:
+            $ref: '#/components/schemas/LayerResponse'
+    DeductibleResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        calcDeductibleValue:
+          $ref: '#/components/schemas/FieldNumber'
+        calcDeductibleValuePercent:
+          $ref: '#/components/schemas/FieldNumber'
+        minAmount:
+          $ref: '#/components/schemas/FieldNumber'
+        maxAmount:
+          $ref: '#/components/schemas/FieldNumber'
+        deductibleApplicationCondition:
+          $ref: '#/components/schemas/FieldBoolean'
+    LimitResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        calcLimitValue:
+          $ref: '#/components/schemas/FieldNumber'
+        limitDynamics:
+          $ref: '#/components/schemas/FieldString'
+        limitApplicationCondition:
+          $ref: '#/components/schemas/FieldBoolean'
+        exclusion:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExclusionResponse'
+    BusinessRiskPackageResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        premium:
+          $ref: '#/components/schemas/Premium'
+        packageRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskPackage'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskResponse'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    Lov:
+      type: object
+      properties:
+        name:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+    AttachmentResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    SubtotalRequest:
+      type: object
+      properties:
+        subtotalUuid:
+          type: string
+        entityType:
+          type: string
+        entityUuid:
+          type: array
+          items:
+            type: string
+    SubtotalResponse:
+      type: object
+      properties:
+        subtotalUuid:
+          type: string
+        premium:
+          $ref: '#/components/schemas/Premium2'
+    StaticDocResponse:
+      type: object
+      properties:
+        code:
+          type: string
+    FieldWithIdValue:
+      type: object
+      properties:
+        currency:
+          type: string
+          description: měna (CZK, USD, EUR, ...)
+        valueString:
+          type: string
+          description: řetězec
+        valueInteger:
+          type: integer
+          description: celé číslo
+          format: int32
+        valueNumber:
+          type: number
+          description: desetinné číslo, interně obvykle implementováno jako BigDecimal
+          format: double
+          example: 3.1415
+        valueBoolean:
+          type: boolean
+          description: boolean hodnota
+        valueDatetime:
+          type: string
+          description: datum a čas
+          format: date-time
+          example: '2023-08-28T12:34:56+02:00'
+        valueDate:
+          type: string
+          description: datum
+          format: date
+          example: '2023-08-28'
+        code:
+          type: string
+          description: Kód z číselníku
+      description: hodnota dynamickeho atributu
+    SpecialAgreementRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    SpecialAgreementResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    FreeAgreementRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean'
+    FreeAgreementResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    ProductDefinitionResponsePD:
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductDefinitionPD'
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartnerPD'
+        locations:
+          type: array
+          description: Lokace (Addresa nebo parcela)
+          items:
+            $ref: '#/components/schemas/LocationPD'
+        agentRoles:
+          type: array
+          description: Role získatelů
+          items:
+            $ref: '#/components/schemas/AgentRolePD'
+        additionalInformation:
+          $ref: '#/components/schemas/AdditionalInformationPD'
+        context:
+          $ref: '#/components/schemas/ContextPD'
+        swaggers:
+          $ref: '#/components/schemas/SwaggerPD'
+      description: >-
+        Odpověď volaní product-service, která obsahuje status a případné
+        validační hlášky
+    ProductDefinitionPD:
+      type: object
+      properties:
+        inceptionDateAndTimeRules:
+          $ref: '#/components/schemas/InceptionDateAndTimeRulesPD'
+        premiumCalculationBase:
+          type: string
+          description: >
+            **Báze kalkulace pojistného**
+
+            > **Definice:** Atribut vychází z číselníku
+            lov_premium_calculation_base a určuje časový nebo výpočtový základ,
+            podle kterého se počítá pojistné.Nejčastěji se používá roční báze,
+            ale může být i měsíční nebo jednorázová.R – ročníM – měsíčníJ –
+            jednorázováJednorázová báze se používá například u cestovního
+            pojištění, kde se sazba za den násobí počtem dní, takže výsledkem je
+            jednorázové pojistné za celé období.
+        offerFixationAllowed:
+          type: boolean
+          description: >
+            **Fixace nabídky povolena**
+
+            > **Definice:** Atribut určuje, zda může být nabídka pojistné
+            smlouvy zafixována tedy zda lze uzamknout cenu a podmínky nabídky na
+            určité období.Pokud je hodnota true, lze nabídku zafixovat a
+            klientovi garantovat, že smlouvu bude možné sjednat dle stavu, kdy
+            byla nabídka vytvořena. Pokud je hodnota false, uživatel (získatel)
+            nemůže nabídku zamknout a cena se může kdykoliv přepočítat (např. po
+            změně tarifů nebo při opětovném otevření návrhu). Fixaci nabídky je
+            možné provést pouze tehdy, je-li povolena u daného produktu.
+            Současně je definován atribut maximumFixationDayNumber, který určuje
+            maximální počet dní, po které lze nabídku fixovat.
+        methodForFixedPeriod:
+          type: string
+          description: >
+            **Metoda určení data konce pro dobu určitou**
+
+            > **Definice:** Atribut řídí, jakým způsobem se určuje datum
+            ukončení pojistné smlouvy (PS). Hodnota atributu vychází z
+            číselníku. Má smysl jej definovat pouze v případě, že je produkt
+            nastaven na pojistnou dobu určitou. Pokud tato možnost není
+            povolena, atribut nebude vyplněn ani zahrnut v definici produktu.
+        forwardMaximumDayNumber:
+          type: number
+          description: >
+            **Maximální počet dní do budoucna**
+
+            > **Definice:** Atribut stanovuje, o kolik dní dopředu lze nastavit
+            datum předložení návrhu vůči aktuálnímu datu.Datum předložení návrhu
+            představuje okamžik, kdy byl návrh pojistné smlouvy předložen
+            klientovi k akceptaci.V systému se eviduje jak datum, tak i čas
+            předložení návrhu.Tento atribut tedy určuje maximální povolený počet
+            dní do budoucna, o které může být návrh předložen oproti dnešnímu
+            datu
+        maximumFixationDayNumber:
+          type: number
+          description: >
+            **Maximální počet dní do budoucna**
+
+            > **Definice:** Atribut určuje, na jak dlouho lze zafixovat stav
+            nabídky pojistné smlouvy, tedy garantovat klientovi, že po tuto dobu
+            bude možné smlouvu sjednat podle podmínek platných při vytvoření
+            nabídky.Fixaci nabídky lze provést pouze tehdy, je-li u produktu
+            povolena (atribut offerFixationAllowed = true).Hodnota tohoto
+            atributu určuje maximální dobu fixace v kalendářních dnech.
+        proposalMaximumDayNumber:
+          type: number
+          description: >
+            **Maximální počet dní přijetí návrhu**
+
+            > **Definice:** Atribut stanovuje, do kdy může pojistník přijmout
+            návrh pojistné smlouvy.Pokud k přijetí návrhu nedojde ve stanovené
+            lhůtě, návrh zaniká.Způsob výpočtu termínu přijetí návrhu je určen
+            pravidly produktu, která zohledňují metodu uzavření smlouvy a další
+            parametry.V některých případech nemusí být termín přijetí návrhu
+            stanoven — tehdy je systémově uloženo datum a čas „na
+            neurčito“.Pokud má smlouva příznak plovoucího počátku, použije se
+            alternativní atribut proposalMaximumDayNumberVariableInceptionDate.V
+            systému se eviduje datum i čas termínu pro přijetí návrhu.
+        proposalMaximumDayNumberVariableInceptionDate:
+          type: number
+          description: >
+            **Max. počet dní přijetí návrhu pro variabilní počátek**
+
+            > **Definice:** Atribut určuje, do kdy může být přijat návrh
+            pojistné smlouvy, pokud má smlouva příznak plovoucího počátku
+            (variableInceptionDateAllowed = true).V takovém případě se pro
+            výpočet termínu použije tato hodnota místo standardního atributu
+            proposalMaximumDayNumber.Pokud variabilní počátek není povolen,
+            využije se běžný termín přijetí návrhu definovaný atributem
+            proposalMaximumDayNumber.Termín přijetí návrhu určuje poslední den,
+            kdy může pojistník návrh akceptovat, jinak návrh zaniká.
+        acquisitionAgentProficiencyLevelLife:
+          type: string
+          description: >
+            **Odbornost získatele životní**
+
+            > **Definice:** Atribut vychází z číselníku
+            lov_acquisition_agent_proficiency_level_life a stanovuje, zda musí
+            mít získatel zkoušku odborné způsobilosti pro životní pojištění
+            podle zákona č. 170/2018 Sb. o distribuci pojištění a zajištění.Od
+            1. 12. 2018 musí mít každý získatel splněnou příslušnou zkoušku
+            odbornosti pro skupinu pojištění, kterou sjednává.Tento atribut se
+            zaměřuje výhradně na životní pojištění a nabývá následujících
+            hodnot:0  Není nutná odbornost č. 1 (životní pojištění).1 Je nutná
+            odbornost č. 1 (životní pojištění).Atribut se používá v kombinaci s
+            atributem acquisitionAgentProficiencyLevelMinimumNL, který určuje
+            požadavky na odbornost pro neživotní pojištění.
+        acquisitionAgentProficiencyLevelMinimumNL:
+          type: string
+          description: >
+            **Minimální odbornost získatele neživotní**
+
+            > **Definice:** Atribut vychází z číselníku
+            lov_acquisition_agent_proficiency_level_minimum_nl a stanovuje,
+            jakou minimální úroveň odborné způsobilosti musí mít získatel podle
+            zákona č. 170/2018 Sb. o distribuci pojištění a zajištění. Odbornost
+            získatele je rozdělena do pěti úrovní: distribuce životního
+            pojištění distribuce pojištění škod na pozemních vozidlech a
+            odpovědnosti z provozu distribuce neživotního pojištění
+            (obecně)distribuce neživotního pojištění týkající se podnikatelské
+            činnosti distribuce pojištění velkých pojistných rizik. Atribut se
+            vztahuje pouze na neživotní pojištění a určuje minimální požadovanou
+            úroveň odbornosti, kterou musí mít získatel, aby mohl produkt
+            sjednat. Vyšší úroveň automaticky zahrnuje nižší. Možné hodnoty:0
+            Není nutná neživotní odbornost2 Minimální neživotní odbornost č. 23
+            Minimální neživotní odbornost č. 34 Minimální neživotní odbornost č.
+            45 Minimální neživotní odbornost č. 5 Tento atribut se používá
+            společně s acquisitionAgentProficiencyLevelLife k určení odborných
+            požadavků pro sjednávání produktu.
+        insurancePeriod:
+          type: string
+          description: >
+            **Pojistné období**
+
+            > **Definice:** Atribut vychází z číselníku lov_insurance_period a
+            obvykle má hodnotu R (roční), pokud není stanoveno jinak. Pojistné
+            období představuje časový úsek, po který je pojištění platné a za
+            který se platí pojistné. První pojistné období začíná dnem počátku
+            pojištění. Další období začíná dnem, který se svým číselným
+            označením shoduje s datem počátku účinnosti pojištění; pokud takový
+            den v měsíci neexistuje, použije se poslední den daného měsíce.
+            Každé pojistné období končí dnem předcházejícím počátku
+            následujícího období. Pojistná smlouva může být vypovězena ke konci
+            pojistného období s výpovědní lhůtou šesti týdnů.
+        lossPayeeClauseLevelObject:
+          type: boolean
+          description: >
+            **Úroveň vinkulace**
+
+            > **Definice:** Atribut se používá pouze tehdy, pokud je u produktu
+            povolena vinkulace (lossPayeeClauseAllowed = true). Určuje, na jaké
+            úrovni může být vinkulace evidována – smlouva, objekt nebo riziko.
+            Pokud je tento atribut nastaven na true, znamená to, že vinkulace
+            může být evidována na úrovni objektu. Současně platí, že jen jeden z
+            atributů úrovně vinkulace (Smlouva / Objekt / Riziko) může mít
+            hodnotu true.
+        lossPayeeClauseLevelRisk:
+          type: boolean
+          description: >
+            **Úroveň vinkulace riziko**
+
+            > **Definice:** Atribut se používá pouze tehdy, pokud je u produktu
+            povolena vinkulace (lossPayeeClauseAllowed = true). Definuje, na
+            jaké úrovni může být vinkulace evidována – Smlouva / Objekt /
+            Riziko. Pokud je tento atribut nastaven na true, znamená to, že
+            vinkulace může být evidována na úrovni rizika. Současně platí, že
+            jen jeden z atributů úrovně vinkulace (Smlouva / Objekt / Riziko)
+            může mít hodnotu true.
+        lossPayeeClauseLevelContract:
+          type: boolean
+          description: >
+            **Úroveň vinkulace smlouva**
+
+            > **Definice:** Atribut se používá pouze tehdy, pokud je u produktu
+            povolena vinkulace (lossPayeeClauseAllowed = true). Definuje, na
+            jaké úrovni může být vinkulace evidována – Smlouva / Objekt /
+            Riziko. Pokud je tento atribut nastaven na true, znamená to, že
+            vinkulace může být evidována na úrovni celé smlouvy. Současně platí,
+            že jen jeden z atributů úrovně vinkulace (Smlouva / Objekt / Riziko)
+            může mít hodnotu true.
+        lossPayeeClauseAllowed:
+          type: boolean
+          description: >
+            **Vinkulace povolena**
+
+            > **Definice:** Atribut vyjadřuje, zda lze u daného produktu vázat
+            výplatu pojistného plnění ve prospěch třetí osoby – obvykle věřitele
+            pojištěného (např. banky poskytující úvěr). Vinkulace slouží jako
+            forma zajištění pohledávky a zajišťuje, že případné pojistné plnění
+            bude vyplaceno věřiteli namísto pojištěného. Běžně se používá u
+            hypotečních úvěrů nebo jiných půjček na nemovitost, kde banka chrání
+            svůj zájem na pojištěné věci. Pokud je atribut nastaven na true,
+            může být v produktu dále určena úroveň vinkulace (Smlouva / Objekt /
+            Riziko) pomocí příslušných atributů.
+        roundBusinessRisk:
+          type: boolean
+          description: >
+            **Zaokrouhlit obchodní rizika**
+
+            > **Definice:** Atribut stanovuje, zda se pojistné (roční po
+            slevách, lhůtní, alikvótní nebo první) zaokrouhluje hlavním nebo
+            interním zaokrouhlením. Hodnota atributu ovlivňuje výpočet
+            pojistného a slev na úrovni obchodních rizik, zejména při výpočtu:
+            ročního pojistného, lhůtního pojistného, alikvótního pojistného,
+            prvního pojistného.
+        aliquotReductionOfPremium:
+          type: boolean
+        shortThermCalculationType:
+          type: number
+        productTemplate:
+          type: string
+          description: >
+            **Šablona produktu**
+
+            > **Definice:** Atribut vychází z číselníku „Šablona produktu“ a
+            slouží k rozlišení hlavní kategorie pojištění, do které produkt
+            spadá. Pomáhá systémově rozlišovat obchodní logiku, výpočty i
+            zobrazování podle typu produktu. Možné hodnoty: PMP -> Pojištění
+            majetku a odpovědnosti podnikatelů PMO -> Pojištění majetku a
+            odpovědnosti občanů PMV -> Pojištění motorových vozidel IV->
+            Pojištění osob ES -> Cestovní pojištění
+        groupTariffVersion:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Verze sady sazebníků**
+
+                > **Definice:** Atribut určuje, s jakou verzí sazebníků byla
+                entita (produkt, objekt nebo obchodní riziko) sjednána. Je
+                evidován na úrovni product, insuredObject a businessRisk. Při
+                změně smlouvy může být: zachována původní sada sazebníků
+                (identifikovaná touto hodnotou), nebopoužita aktuální sada
+                sazebníků, přičemž se atribut aktualizuje na novou verzi. Na
+                úrovni produktu určuje, kterou verzí sady sazebníků byla smlouva
+                sjednána či naposledy přepočtena. Atribut je „in/out“ tedy
+                přichází na vstupu, pokud je znám (např. uložená hodnota z
+                předchozí kalkulace), a systém ho po výpočtu vrací zpět s
+                případně aktualizovanou hodnotou.
+        policy:
+          allOf:
+            - $ref: '#/components/schemas/PolicyBodyPD'
+            - description: |
+                **Atributy pro sjednání smlouvy**
+                > **Definice:** Obsahuje staticke atributy pro sjednání smlouvy.
+        attributes:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/FieldWithFIDPD'
+            - description: >
+                > **Definice:** Tento objekt obsahuje vnořené prvky využívající
+                struktury
+        insuranceLocation:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/InsuranceLocationPD'
+            - description: >
+                **Místo Pojištění**
+
+                > **Definice:** Atribut představuje entitu určující konkrétní
+                místo pojištění, které se následně přiřazuje jednotlivým
+                pojištěným objektům. Místo pojištění může být definováno, pokud
+                má pojištěný objekt fyzické umístění (např. budova, provozovna,
+                nemovitost apod.). Pokud objekt nemá konkrétní místo pojištění,
+                krytí se řídí územním rozsahem uvedeným v produktové definici.
+                Produkt může mít: jedno nebo více míst pojištění, nebo žádné,
+                pokud to povaha produktu nevyžaduje (např. pojištění osob či
+                odpovědnosti). Další informace: viz dokument Místo pojištění na
+                Confluence. Atribut určuje geografickou nebo věcnou lokalizaci
+                pojištěných objektů a je základem pro vyhodnocení územní
+                platnosti pojištění.
+        productPartner:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/ProductPartnerPD'
+            - description: >
+                **Partner Produktu**
+
+                > **Definice:** Atribut představuje entitu pro určení partnerů
+                smlouvy a jejich rolí v rámci sjednaného produktu. Jedná se o
+                povinnou entitu ve struktuře pojistné smlouvy. Role partnerů
+                určují vztahy mezi účastníky smlouvy, které jsou definovány
+                podle typu produktu. Platí předpoklad:1 smlouva = 1 produkt.
+                Role mohou být přiřazeny: na úrovni produktu (smlouvy) –
+                představují smluvní vztah (např. pojistník, pojištěný, oprávněná
+                osoba),na úrovni pojištěného objektu – představují vztah ke
+                konkrétnímu objektu (např. pojištěný majetek, provozovna,
+                dopravní prostředek).Partner v roli může být: definovaný
+                (existující v doméně Partner), nebo nedefinovaný (obecný vztah
+                bez konkrétní osoby, např. všichni členové domácnosti).Každý
+                produkt může mít definováno N rolí partnera, přičemž atributy
+                role určují: povinnost existence (zda je role
+                vyžadována),četnost výskytu (např. 1 pojistník, více
+                pojištěných),úroveň vazby (produkt / objekt).Entita zajišťuje
+                vazby mezi smlouvou, objekty a účastníky pojištění a určuje, v
+                jaké roli daný partner na smlouvě vystupuje.
+        productDiscountSurcharge:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/DiscountSurchargePD'
+            - description: >
+                **Sleva/Přirážka produktu**
+
+                > **Definice:** Entita určuje, jaké slevy a přirážky je možné u
+                produktu použít, za jakých podmínek a na jaké úrovni smlouvy.Z
+                hlediska významu slouží k ovlivnění výsledné výše pojistného
+                podle technických, obchodních nebo marketingových pravidel.Typy
+                slev a přirážek:Technické – např. vyrovnávací sleva/přirážka z
+                důvodu výpočtových nebo tarifních parametrů.Obchodní – přiděluje
+                získatel, typicky podle svých oprávnění nebo prodejní
+                strategie.Marketingové – automaticky aplikované systémem podle
+                marketingových kampaní nebo produktových balíčků.Oceňovací (v
+                životním pojištění) – např. přirážka za zdravotní stav,
+                rozhoduje underwriting nebo systémové vyhodnocení.Řízení a
+                aplikace:Každá sleva/přirážka je jednoznačně identifikována
+                kódem a názvem.Na obchodním produktu je definováno, které
+                slevy/přirážky jsou dostupné, jak se aplikují a v jakém rozsahu
+                (částka nebo procento).Nastavení je řízeno produktem, ale
+                obchodní slevy lze upravit v modulu slev pro konkrétní
+                uživatele.Slevy a přirážky lze uplatnit na různých
+                úrovních:smlouvy,pojištěného objektu,obchodního nebo
+                elementárního rizika.Výsledné hodnoty:Eviduje se přidělená
+                sleva/přirážka a vypočítaná částka dle báze kalkulace
+                pojistného:sleva na kalkulovaném, ročním nebo alikvótním
+                pojistném,zvlášť i sleva na první pojistné.Systém vyhodnocuje
+                výsledné pojistné po slevách a přirážkách na všech úrovních
+                (smlouva, balíček, rizika).Další informace: viz dokument
+                SLEVA/PŘIRÁŽKA na Confluence – obsahuje detailní seznam atributů
+                a pravidel.Entita slouží k centralizované správě všech typů slev
+                a přirážek v rámci produktové definice, a určuje jejich vliv na
+                kalkulaci výsledného pojistného.
+        insuredObject:
+          allOf:
+            - type: array
+            - items: null
+              $ref: '#/components/schemas/InsuredObjectPD'
+            - description: >
+                **Pojištený objekt** 
+
+                > **Definice:** Slouží k definici pojištěných objektů v rámci
+                pojistné smlouvy. Entita představuje pojištěný objekt, na který
+                se vztahuje pojistné krytí sjednaného produktu. Každá pojistná
+                smlouva může obsahovat jeden nebo více pojištěných objektů,
+                podle charakteru produktu.
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        productLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        validation:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/ValidationPD'
+            - description: |
+                **Validace** 
+                > **Definice:**
+        constraint:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/ConstraintPD'
+            - description: >
+                **Omezení** 
+
+                > **Definice:** Umožňuje definovat specifická pravidla, která
+                omezují povolené kombinace nebo hodnoty atributů. Používá se
+                zejména tam, kde je potřeba společné pravidlo pro více atributů
+                nebo kde není vhodné řešit kontrolu pomocí jednotlivých
+                validací.
+        attachment:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/AttachmentPD'
+            - description: >
+                > **Definice:** Příloha včetně podmínek nadefinovaná na úrovni
+                smlouvy
+        staticDoc:
+          allOf:
+            - type: array
+            - items:
+                $ref: '#/components/schemas/StaticDocPD'
+            - description: >
+                > **Definice:** Umožňuje centrálně definovat statické dokumenty
+                pojistné smlouvy (např. pojistné podmínky, informační dokumenty)
+                a následně je automaticky přiřazovat ke smlouvě nebo k nižším
+                entitám (např. pojištěnému objektu).
+        specialAgreement:
+          allOf:
+            - type: array
+            - items: null
+              $ref: '#/components/schemas/SpecialAgreementPD'
+            - description: |
+                > **Definice:**
+        freeAgreement:
+          allOf:
+            - $ref: '#/components/schemas/FreeAgreementPD'
+            - description: >
+                > **Definice:** Ukazuje, kde v produktové struktuře jsou volná
+                zvláštní ujednání definována
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityPD'
+        registeredBusinessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegisteredBusinessActivityPD'
+        AMLCheck:
+          type: boolean
+        CRSCheck:
+          type: boolean
+        FATCACheck:
+          type: boolean
+        taxAllowancesProduct:
+          type: string
+        techInterestRate:
+          type: number
+        premiumEmployerAllowed:
+          type: boolean
+        delayPeriodTransfer:
+          type: boolean
+        authorizedMortgageeConsent:
+          type: boolean
+    InceptionDateAndTimeRulesPD:
+      type: object
+      description: >
+        > **Definice:** seskupují atributy které definují pravidla pro chování
+        datumu počátku při sjednání smlouvy
+
+        > **[Konfigurace časových
+        pravidel](#tag/Konfigurace-casovych-pravidel)**.
+      properties:
+        variableInceptionDateAllowed:
+          type: boolean
+        retroactiveInceptionDateAllowed:
+          type: boolean
+        inceptionTimeIsInput:
+          type: boolean
+          description: >
+            **Čas data počátku je vstup**
+
+
+            > **Definice:** Pokud je hodnota nastavena na true, systém umožní
+            uživateli zadat i čas počátku účinnosti.Pokud je nastavena na false,
+            čas se automaticky nastaví na 00:00 Atribut souvisí s polem
+            inceptionTime – tento údaj se v odpovědi (response) produktu Domex+
+            nevyskytuje.Pro produkt Domex+ je výchozí hodnota false.
+        inceptionDateFrom:
+          type: string
+          format: date-time
+          description: >
+            **Dátum počátku od**
+
+            > **Definice:** Hodnota se vypočítá jako:maximum (TODAY + Minimální
+            počet dní do data počátku, Minimální datum počátku účinnosti PS).Tím
+            se zajistí, že počátek pojištění nelze nastavit dříve, než je
+            systémem nebo produktem povoleno.
+        inceptionDateTo:
+          type: string
+          format: date-time
+          description: >
+            **Datum počátku do**
+
+            > **Definice:** Hodnota se počítá jako: TODAY + Maximální počet dní
+            do data počátku.Ve výjimečných případech může být výsledné Datum
+            počátku do menší než Datum počátku od, což znamená, že nelze
+            aktuálně smlouvu sjednat (např. když je minimální datum počátku
+            nastaveno daleko do budoucna).
+        inceptionDateFromRetroactive:
+          type: string
+          format: date-time
+          description: >
+            **Datum počátku od pro zpětný počátek**
+
+            > **Definice:**  předává informaci jaké je minimální Datum počátku
+            účinnosti PS vzhledem k TODAY je-li na smlouvě současně povolen
+            zpětný počátek (Příznak zpětného posunu počátku = true).Pokud je
+            Zpětný posun počátku povolen true pak se vypočítá jako maximum(TODAY
+            - Maximální počet dní posunu Minimální datum počátku účinnosti PS)
+            jinak se spočítá jako maximum(TODAY + Minimální počet dní do data
+            počátku Minimální datum počátku účinnosti PS) (tzn. stejně jako CAL
+            Datum počátku od).
+        inceptionDateToRetroactive:
+          type: string
+          format: date-time
+          description: >
+            **Datum počátku do pro zpětný počátek**
+
+            > **Definice** předává informaci jaké je maximální Datum počátku
+            účinnosti PS vzhledem k TODAY je-li na smlouvě současně povolen
+            zpětný počátek (Příznak zpětného posunu počátku = true).Vždy se
+            vypočítá shodně jako CAL Datum počátku do, tzn. TODAY + Maximální
+            počet dní do data počátku (v budoucnu je možné, že by mohlo být
+            vyhodnocováno jinak, a proto byl raději vyhrazen samostatný
+            atribut).
+        methodForInception:
+          type: string
+          description: >
+            **Metoda pro určení data počátku**
+
+            > **Definice:** Atribut kterým se bude řídit jakým způsobem se bude
+            pracovat s datem počátku účinnosti PS.Pokud je tato hodnota
+            nastavena na 1 tak se zobrazují atributy inception DateInput a
+            termination DateInput.Číselník: lov method for_inceptionV domex je
+            hodnota 1 co znaci ze Datum zadáno uživatelem jako vstup
+        allowedDates:
+          type: array
+          items:
+            type: object
+            properties:
+              allowedDate:
+                type: string
+                format: date-time
+    PolicyBodyPD:
+      type: object
+      properties:
+        proposalPresentationDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum předložení návrhu**
+
+                > **Definice:** Atribut určuje okamžik, kdy byl návrh pojistné
+                smlouvy předložen klientovi. Hodnota je v systému automaticky
+                evidována (datum i čas) a na frontendu se zobrazuje jako
+                needitovatelné šedé pole. Slouží jako vstupní parametr pro
+                kalkulaci pojistné smlouvy.
+        inceptionDateInput:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum počátku účinnosti PS**
+
+                > **Definice:** Atribut určuje datum, kdy končí účinnost
+                pojistné smlouvy (PS). Jedná se o poslední den, kdy je platné
+                některé z rizik po jeho uplynutí smlouva zaniká. Atribut se
+                používá pro zadání data konce uživatelem, ale pouze u produktů,
+                kde má atribut methodForFixedPeriod hodnotu 2 („Datum zadáno
+                uživatelem jako vstup“). Pro Domex je hodnota 3 (na rok) Pokud
+                tato metoda na technickém produktu není povolena, atribut nebude
+                v produktu zahrnut.
+        inceptionDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum počátku účinnosti PS**
+
+                > **Definice:** Atribut představuje okamžik, od kterého je
+                pojistná smlouva účinná. Datum počátku může být nastaveno před,
+                k nebo po datu předložení návrhu či uzavření smlouvy. Obvykle od
+                tohoto data začínají platit rizika, ale může existovat i
+                smlouva, která je účinná bez platných rizik. U některých
+                produktů je možné datum počátku zadat zpětně (tzv. zpětný posun
+                počátku). Na produktu jsou definovány limity: minimální a
+                maximální počet dní mezi datem předložení návrhu a datem počátku
+                účinnosti, metoda pro určení data počátku (methodForInception),a
+                pravidlo, zda se zadává i čas počátku účinnosti
+                (inceptionTimeIsInput). Časová složka se určuje takto: pokud je
+                datum počátku = today, vloží se aktuální čas, jinak se použije
+                čas 00:00.Na úrovni smlouvy je atribut uložen jako jedna hodnota
+                typu datetime, která kombinuje datum i čas počátku účinnosti.
+        terminationDateInput:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum konce PS**
+
+                > **Definice:** Atribut určuje datum, kdy končí účinnost
+                pojistné smlouvy (PS). Jedná se o poslední den, kdy je platné
+                některé z rizik po jeho uplynutí smlouva zaniká. Atribut se
+                používá pro zadání data konce uživatelem, ale pouze u produktů,
+                kde má atribut methodForFixedPeriod hodnotu 2 („Datum zadáno
+                uživatelem jako vstup“). Pro Domex je hodnota 3 (na rok) Pokud
+                tato metoda na technickém produktu není povolena, atribut nebude
+                v produktu zahrnut.
+        terminationDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum konce PS**
+
+                > **Definice:** Atribut představuje poslední den, kdy je ještě
+                platné některé z rizik na pojistné smlouvě. Po ukončení tohoto
+                dne zaniká poslední riziko a tím i celá pojistná smlouva. Datum
+                konce PS stanovené při sjednání nemusí být konečné — u některých
+                produktů existuje možnost: automatické prolongace (prodloužení o
+                další rok),zkrácení nebo prodloužení pojistné doby,¨nebo jiné
+                funkcionality ovlivňující délku trvání pojištění. Při stornu
+                smlouvy se datum konce nemění. U smluv na dobu neurčitou se
+                nastavuje hodnota 31. 12. 2999. U smluv na dobu určitou závisí
+                výpočet na atributu methodForFixedPeriod, který určuje metodu
+                stanovení data konce. Časová složka atributu je vždy nastavena
+                na 23:59.
+        conclusionDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum uzavření PS**
+
+                > **Definice:** Datum uzavření PS je legislativním datem, od
+                kterého: začíná platnost Pojistné smlouvy, běží lhůty pro
+                odstoupení nebo výpověď smlouvy. Způsob akceptace návrhu závisí
+                na nastavení atributu methodConcludingContract (Metoda uzavření
+                smlouvy).V systému je evidováno datum i čas uzavření pojistné
+                smlouvy.
+        contractualDocumentationCreationDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum vytvoření smluvní dokumentace**
+
+                > **Definice:** Atribut představuje okamžik, kdy byl z Modelace
+                nebo Kalkulace pojistné smlouvy (SUS+) vytvořen Návrh pojistné
+                smlouvy. Tento okamžik zároveň znamená, že z kalkulaček v SUS+
+                byla předána data návrhu pojistné smlouvy do systému a zahájen
+                proces akceptace. V systému je evidováno datum i čas vytvoření
+                smluvní dokumentace.
+        coveragePeriod:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Pojistná doba**
+
+                > **Definice:** Atribut vyjadřuje, na jak dlouho je pojištění
+                uzavřeno. Rozlišují se dva základní typy pojistné doby: Doba
+                neurčitá pojištění trvá, dokud není smlouva ukončena. Doba
+                určitá pojištění je sjednáno na pevně stanovené období (např. v
+                letech, měsících nebo dnech).Hodnoty jsou řízeny číselníkem
+                POJISTNÁ DOBA (lov_coverage_period).
+        coveragePeriodOutput:
+          $ref: '#/components/schemas/FieldPD'
+        paymentFrequency:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Frekvence placení**
+
+                > **Definice:** Atribut vyjadřuje, jak často je pojistné hrazeno
+                v rámci sjednané pojistné smlouvy. Možné hodnoty představují
+                obvyklé způsoby úhrady, např.: roční, pololetní, čtvrtletní,
+                měsíční, jednorázová platba. Hodnoty jsou řízeny číselníkem
+                FREKVENCE PLACENÍ (lov_payment_frequency).
+        methodConcludingContract:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Metoda uzavření smlouvy**
+
+                > **Definice:** Atribut identifikuje, zda byla smlouva uzavřena
+                podpisem nebo platbou, a zároveň určuje konkrétní způsob tohoto
+                úkonu, např.: vlastnoruční podpis, digitální podpis, zaručený
+                elektronický podpis, BANK ID, platba převodem nebo na platebním
+                místě. Atribut je vstupní (input), ale během přepočtu smlouvy
+                mohou být — na základě definovaných podmínek — povolené metody
+                automaticky upraveny nebo omezeny podle parametrů dané smlouvy.
+                Hodnoty jsou řízeny číselníkem METODA UZAVŘENÍ SMLOUVY
+                (lov_method_concluding_contract).
+        proposalAcceptanceDeadline:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Termín pro přijetí návrhu**
+
+                > **Definice:** Atribut vyjadřuje poslední možný okamžik pro
+                akceptaci návrhu pojistné smlouvy ze strany pojistníka. Pokud
+                nedojde k přijetí návrhu do tohoto termínu, návrh zaniká. Na
+                produktu jsou definována pravidla pro určení termínu v
+                závislosti na: Metodě uzavření smlouvy
+                (methodConcludingContract), dalších vlastnostech smlouvy (např.
+                variabilní počátek, maximální počet dní pro přijetí návrhu).V
+                některých případech nemusí být termín stanoven, pak je technicky
+                uloženo systémové datum a čas na neurčito. V systému je vždy
+                evidováno datum i čas termínu pro přijetí návrhu
+        arrangementType:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Typ sjednání**
+
+                > **Definice:** Atribut specifikuje, zda je sjednávaná smlouva
+                nová, náhradní nebo obnovovaná.
+        legislationVersion:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Verze legislativy**
+
+                > **Definice:** Atribut udává, kterými obecnými právními
+                předpisy se daná pojistná smlouva řídí. Slouží k rozlišení
+                právních režimů podle příslušné legislativy platné v době
+                sjednání smlouvy. Hodnoty jsou řízeny číselníkem VERZE
+                LEGISLATIVY (lov_legislation_version),
+        annualDay:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Den výročí**
+
+                > **Definice:** Atribut představuje den výročí pojistné smlouvy,
+                který — spolu s atributem annualMonth — určuje významný den v
+                roce, od kterého se odvíjí klíčové datumové položky smlouvy,
+                jako např.: splatnost pojistného, hranice pojistného roku,
+                výpovědní lhůty. Výroční den se obvykle odvozuje z data počátku
+                smlouvy. U flotilových smluv může být odvozen z počátku flotily,
+                i když počátek konkrétní smlouvy je jiný — všechny termíny
+                (splatnosti, výpovědi) se ale dále řídí právě tímto výročním
+                dnem. První předpis pojistného může být v takovém případě
+                alikvotně krácen, aby pokrýval období od počátku po nejbližší
+                výroční den. V systému jsou uloženy dva atributy: Den výročí
+                (annualDay), Měsíc výročí (annualMonth). Výroční den PS se pak
+                tvoří jako kombinace:Den výročí + Měsíc výročí + aktuální rok.
+                Atribut se vyplňuje pouze u běžně placených smluv. U jednorázově
+                placených smluv není vyplněn, protože by mohl působit matoucím
+                dojmem (smlouvy mohou trvat déle než jeden rok).Atribut slouží k
+                určení výročního dne pojistné smlouvy a k výpočtu následných
+                termínů splatnosti a výpovědí.
+        annualMonth:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Měsíc výročí**
+
+                > **Definice:** Atribut představuje měsíc výročí pojistné
+                smlouvy, podle kterého se odvíjejí všechny další datumové
+                položky smlouvy, jako např.: splatnost pojistného, hranice
+                pojistného roku, výpovědní lhůty. Výroční den se obvykle
+                odvozuje z data počátku smlouvy. U flotilových smluv může být
+                odvozen z počátku flotily, přičemž i v takovém případě se další
+                data (splatnosti, výpovědi) řídí tímto výročním dnem. První
+                předpis pojistného může být alikvotně krácen, aby pokrýval
+                období od počátku po nejbližší výroční den. V systému jsou
+                uloženy dva atributy:Den výročí (annualDay),Měsíc výročí
+                (annualMonth). Aktuální výroční den PS se určuje jako kombinace:
+                Den výročí + Měsíc výročí + aktuální rok. Atribut se vyplňuje
+                pouze u běžně placených smluv. U jednorázově placených smluv
+                není vyplněn, protože může být zavádějící (smlouvy mohou
+                přesahovat jeden rok).Atribut slouží k určení měsíce výročí
+                pojistné smlouvy, od kterého se odvíjí všechny časové události
+                spojené s pojistnou smlouvou.
+        negotiationWay:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Způsob jednání**
+
+                > **Definice:** Atribut vyjadřuje, zda byla smlouva sjednána
+                osobně nebo na dálku, přičemž rozlišuje i místo prodeje (obvyklé
+                / neobvyklé). Zvolený způsob jednání má zásadní vliv na práva a
+                povinnosti smluvních stran, zejména na možnost odstoupení od
+                smlouvy. Hodnoty jsou řízeny číselníkem ZPŮSOB JEDNÁNÍ
+                (lov_negotiation_way), např.: P: Na místě obvyklém prodeji
+                (prezenčně), N: Na místě neobvyklém prodeji, D: Na dálku
+                (distančně), M: Na místě (ostatní specifikace). Atribut je
+                důležitý pro vyhodnocení právních podmínek a lhůt spojených se
+                sjednáním a odstoupením od pojistné smlouvy.
+        paymentMethod:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Platební metoda**
+
+                > **Definice:** Atribut specifikuje platební metodu, kterou bude
+                pojistník používat pro úhradu běžného pojistného (např. měsíční
+                nebo roční platby).Příklady možných hodnot :bankovní převod,
+                inkaso z účtu, SIPO, platební brána apod. Pro první nebo
+                jednorázové pojistné se tento atribut neeviduje. Poznámka:
+                Platební metoda (paymentMethod) není totožná s atributem
+                methodConcludingContract (Metoda uzavření smlouvy). Ten
+                popisuje, jak byla smlouva uzavřena (např. podpisem nebo
+                platbou), zatímco tento atribut popisuje jak bude hrazeno
+                pojistné po uzavření smlouvy. Hodnoty jsou řízeny číselníkem
+                PLATEBNÍ METODA (lov_payment_method).Atribut určuje technický
+                způsob úhrady pojistného a ovlivňuje proces zpracování plateb v
+                systému.
+        fixationFromDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Datum fixace od**
+
+                > **Definice:** Atribut se používá pouze v případě, že produkt
+                umožňuje fixaci nabídky(viz atribut offerFixationAllowed) a že
+                uživatel má v KNZ/SUS+ oprávnění tuto funkčnost využít.Pokud je
+                fixace provedena, v doméně CAL se ukládají datumy od kdy a do
+                kdy je nabídka fixována .Pro doménu PRD je však dostačující
+                pouze informace „od kdy“ je fixace aktivní, což je právě hodnota
+                tohoto atributu. Pokud produkt neumožňuje fixaci nabídky,
+                atribut nebude na produktu zahrnut. Atribut určuje okamžik, od
+                kterého je nabídka pojistné smlouvy zafixována podle oprávnění a
+                nastavení produktu.
+        automaticProlongation:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Příznak automatické prolongace**
+
+                > **Definice:** Atribut představuje příznak automatické
+                prolongace pojistné smlouvy.Je sbírán pouze v případě, že
+                produkt automatickou prolongaci podporuje(viz atribut
+                „Automatická prolongace povolena“).Pokud je hodnota nastavena na
+                true, smlouva se po uplynutí pojistné doby automaticky prodlouží
+                na další období bez nutnosti zásahu klienta. Pokud je hodnota
+                false, smlouva po skončení zaniká. Pokud produkt nepovoluje
+                automatickou prolongaci, tento atribut nebude v produktu
+                obsažen. Atribut určuje, zda se pojistná smlouva obnovuje
+                automaticky po skončení svého pojistného období.
+        indexation:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Příznak indexace**
+
+                > **Definice:** Atribut představuje příznak indexace pojistné
+                smlouvy. Používá se pouze tehdy, pokud produkt indexaci
+                podporuje(viz atribut „Indexace povolena“).Pokud je hodnota
+                nastavena na true, smlouva bude automaticky indexována podle
+                pravidel daných produktem (např. o inflaci nebo stanovené
+                procento).Pokud je hodnota false, smlouva zůstává beze změny a
+                indexace se neuplatní. Pokud produkt nepovoluje indexaci,
+                atribut nebude v produktu zahrnut. Atribut určuje, zda se má na
+                dané smlouvě uplatnit každoroční valorizace podle produktových
+                pravidel.
+        variableInceptionDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Příznak variabilního počátku**
+
+                > **Definice:** Atribut představuje příznak variabilního počátku
+                účinnosti pojistné smlouvy. Používá se pouze tehdy, pokud
+                produkt povoluje variabilní počátek (viz atribut „Variabilní
+                počátek povolen“ – variableInceptionDateAllowed). Pokud je
+                hodnota nastavena na true, datum počátku účinnosti pojistné
+                smlouvy se neurčuje při sjednání, ale až později při akceptaci
+                návrhu pojistníkem. Pokud je hodnota false, počátek účinnosti se
+                stanoví přímo při sjednání smlouvy. Pokud produkt nepovoluje
+                variabilní počátek, atribut nebude na produktu zahrnut. Atribut
+                určuje, zda se datum počátku účinnosti smlouvy zadává při
+                sjednání, nebo až následně po akceptaci.
+        retroactiveInceptionDate:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Příznak zpětného posunu počátku**
+
+                > **Definice:** Atribut představuje příznak zpětného počátku
+                účinnosti pojistné smlouvy. Používá se pouze tehdy, pokud
+                produkt umožňuje zpětný posun počátku(viz atribut „Zpětný posun
+                počátku povolen“ – retroactiveInceptionDateAllowed)a pokud má
+                uživatel v systému KNZ/SUS+ odpovídající oprávnění. Pokud je
+                hodnota nastavena na true, znamená to, že uživatel vědomě
+                požádal o zpětné nastavení počátku účinnosti smlouvy, a systém
+                proto uplatní specifické validace a kontroly datumů. Pokud je
+                hodnota false, smlouva se řídí běžnými validačními pravidly.
+                Pokud produkt neumožňuje zpětný počátek, atribut nebude na
+                produktu zahrnut .Atribut označuje, zda má být pojištění účinné
+                zpětně a aktivuje speciální kontrolní logiku na datumová pole.
+        voucher:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Voucher**
+
+                > **Definice:** Atribut představuje technický identifikátor
+                voucheru, který určuje, jaký typ voucheru a s jakými parametry
+                se má na dané smlouvě použít. Produkt v rámci své definice
+                určuje, jak se má s daným typem voucheru zacházet – např. jaký
+                vliv má na kalkulaci, slevy nebo další parametry smlouvy. Tyto
+                definice jsou zpracovávány postupně podle požadavků na použití
+                voucherů. Na jedné pojistné smlouvě může být použit pouze jeden
+                voucher, i když může ovlivňovat více parametrů produktu. Hodnoty
+                jsou řízeny číselníkem VOUCHER (lov_voucher).Atribut umožňuje
+                aplikaci slev nebo speciálních podmínek prostřednictvím
+                definovaného typu voucheru.
+        classifiedContractData:
+          $ref: '#/components/schemas/FieldPD'
+        yearNumber:
+          allOf:
+            - $ref: '#/components/schemas/FieldPD'
+            - description: >
+                **Počet let**
+
+                > **Definice:** Atribut slouží k uživatelskému zadání délky
+                pojistné doby v letech. Používá se pouze u produktů, kde má
+                atribut methodForFixedPeriod(Metoda určení data konce pro dobu
+                určitou) hodnotu 1 Dle počtu let. Na základě zadaného počtu let
+                se následně automaticky vypočítá Datum konce pojistné smlouvy
+                (PS). Pokud produkt nepoužívá metodu 1  Dle počtu let, tento
+                atribut nebude na produktu zahrnut. Atribut umožňuje výpočet
+                konce pojistné smlouvy podle počtu let trvání zadaného
+                uživatelem.
+        targetGroup:
+          $ref: '#/components/schemas/FieldPD'
+        taxAllowancesPolicy:
+          $ref: '#/components/schemas/FieldPD'
+        premiumEmployerContracted:
+          $ref: '#/components/schemas/FieldPD'
+        delayPeriodTransferContracted:
+          $ref: '#/components/schemas/FieldPD'
+        obligationContractPublication:
+          $ref: '#/components/schemas/FieldPD'
+    DiscountSurchargePD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        order:
+          type: number
+        discountSurchargeType:
+          type: string
+        rounding:
+          type: boolean
+        discountSurchargePermanence:
+          type: string
+        discountSurchargeControl:
+          type: string
+        discountSurchargeBehaviourType:
+          type: string
+        minimumValue:
+          type: number
+        maximumValue:
+          type: number
+        selectedValue:
+          $ref: '#/components/schemas/FieldPD'
+        calculatedValue:
+          $ref: '#/components/schemas/FieldPD'
+        calculatedValuePercent:
+          $ref: '#/components/schemas/FieldPD'
+        selectedValuePercent:
+          $ref: '#/components/schemas/FieldPD'
+        discountMinimumPremium:
+          $ref: '#/components/schemas/FieldPD'
+        aliquotDiscount:
+          $ref: '#/components/schemas/FieldPD'
+        calculatedDiscount:
+          $ref: '#/components/schemas/FieldPD'
+        annualDiscount:
+          $ref: '#/components/schemas/FieldPD'
+        bonusScheme:
+          type: string
+        discountSurchargeOutputType:
+          type: string
+        sumWithPrevious:
+          type: boolean
+        bonusSchemeLevel:
+          $ref: '#/components/schemas/FieldPD'
+        entitledDiscount:
+          $ref: '#/components/schemas/FieldPD'
+        excludedRisk:
+          type: string
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+    InsuranceLocationPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        locationSpecification:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSpecificationPD'
+        insuranceLocationLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementPD'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityPD'
+    LocationSpecificationPD:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        locationType:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+    ProductPartnerPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        partnerRoleOrder:
+          type: number
+        personifiedRole:
+          type: boolean
+        nonPerPartnerType:
+          type: string
+        partnerChangePermitted:
+          type: boolean
+        partnerRole:
+          type: string
+        minimumAge:
+          type: number
+        businessPartnerCode:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        characteristics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        gradings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        businessAuthorization:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessAuthorizationPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+    InsuredObjectPD:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        minimumLocationCount:
+          type: number
+        maximumLocationCount:
+          type: number
+        sameInObject:
+          type: string
+        mainObject:
+          type: boolean
+        order:
+          type: number
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        superiorLinkUuid:
+          $ref: '#/components/schemas/FieldPD'
+        indexation:
+          $ref: '#/components/schemas/FieldPD'
+        version:
+          $ref: '#/components/schemas/FieldPD'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        objectInsuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectInsuranceLocationPD'
+        relatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerPD'
+        businessRiskPackage:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPackagePD'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPD'
+        insuredObjectDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargePD'
+        insuredObjectLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        insuredObjectLimitSharing:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitSharingItemsPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        attachment:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentPD'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocPD'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementPD'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityPD'
+    ObjectInsuranceLocationPD:
+      type: object
+      properties:
+        code:
+          type: string
+        locationLinkUuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+    BusinessRiskPackagePD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        packageSelection:
+          type: string
+        packageType:
+          type: string
+        packageDescription:
+          type: string
+        packageOrder:
+          type: number
+        defaultPackage:
+          type: boolean
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        packageRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskPackagePD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        packageHierarchy:
+          type: string
+        superiorPackage:
+          type: string
+        packageGroup:
+          type: number
+        packageGroupName:
+          type: string
+    RiskPackagePD:
+      type: object
+      properties:
+        businessRiskCode:
+          type: string
+        isRemovable:
+          type: boolean
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        riskInPackageOrder:
+          type: number
+    BusinessRiskPD:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        mainRisk:
+          type: boolean
+        mandatoryRisk:
+          type: boolean
+        order:
+          type: number
+        packageOnlyOffer:
+          type: boolean
+        reserveBuildingRisk:
+          $ref: '#/components/schemas/FieldPD'
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        validFrom:
+          $ref: '#/components/schemas/FieldPD'
+        validTo:
+          $ref: '#/components/schemas/FieldPD'
+        businessRiskCalculation:
+          type: boolean
+        territorialValidityLargeArea:
+          $ref: '#/components/schemas/FieldPD'
+        maximumInstanceCount:
+          type: number
+        version:
+          $ref: '#/components/schemas/FieldPD'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        businessRiskDecomposition:
+          type: array
+          items:
+            $ref: '#/components/schemas/ElementaryRiskPD'
+        businessRiskLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        businessRiskDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargePD'
+        businessRiskLimitSharing:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitSharingItemsPD'
+        businessRiskRelatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocPD'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementPD'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        businessRiskCategory:
+          type: string
+        claimCauseCategory:
+          type: string
+        insuranceCoverageCategory:
+          type: string
+        chargePremium:
+          $ref: '#/components/schemas/ChargePremiumPD'
+    ElementaryRiskPD:
+      type: object
+      properties:
+        elementaryRiskCode:
+          type: string
+        decompositionPercent:
+          type: number
+        prohibitedLossPayeeClause:
+          type: boolean
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        deductible:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeductiblePD'
+        businessRiskDecompositionLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        businessRiskDecompositionLimitSharing:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitSharingItemsPD'
+        layer:
+          type: array
+          items:
+            $ref: '#/components/schemas/LayerPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        taxAllowancesElementaryRisk:
+          $ref: '#/components/schemas/FieldPD'
+        elementaryRiskCalculation:
+          type: boolean
+        chargePremium:
+          $ref: '#/components/schemas/ChargePremiumPD'
+    DeductiblePD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        displayed:
+          type: boolean
+        deductibleType:
+          type: string
+        calcDeductibleValue:
+          $ref: '#/components/schemas/FieldPD'
+        calcDeductibleValuePercent:
+          $ref: '#/components/schemas/FieldPD'
+        minAmount:
+          $ref: '#/components/schemas/FieldPD'
+        maxAmount:
+          $ref: '#/components/schemas/FieldPD'
+        validityIntervalTo:
+          type: number
+        validityIntervalFrom:
+          type: number
+        deductibleCondition:
+          type: string
+        deductibleStartFrom:
+          type: string
+        deductibleApplicationCondition:
+          $ref: '#/components/schemas/FieldPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+    LimitPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        limitType:
+          type: string
+        calcLimitValue:
+          $ref: '#/components/schemas/FieldPD'
+        isBasic:
+          type: boolean
+        displayed:
+          type: boolean
+        delayPeriodStartFrom:
+          type: string
+        limitTerritorialValidityLargeArea:
+          type: string
+        buyUpTheRest:
+          type: boolean
+        limitApplicationCondition:
+          $ref: '#/components/schemas/FieldPD'
+        reimbursementPercentage:
+          type: number
+        waitingPeriodRetroactiveBenefit:
+          type: boolean
+        periodValidity:
+          type: string
+        limitDynamics:
+          $ref: '#/components/schemas/FieldPD'
+        superiorLimitCode:
+          type: string
+        limitCondition:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitConditionPD'
+        extendedData:
+          $ref: '#/components/schemas/EntityExtendedDataPD'
+        exclusion:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExclusionPD'
+    LimitConditionPD:
+      type: object
+      properties:
+        code:
+          type: string
+        limitConditionType:
+          type: string
+        limitCondition:
+          type: string
+        limitConditionDesc:
+          type: string
+        assuranceBenefitType:
+          type: string
+    LimitSharingItemsPD:
+      type: object
+      properties:
+        code:
+          type: string
+        limitSharingRelationType:
+          type: string
+        sharedLimitCode:
+          type: string
+    FieldPD:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        name:
+          type: string
+          description: Název pole
+        mandatory:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        type:
+          type: string
+          description: Typ datového pole
+        default:
+          type: string
+          description: Výchozí hodnota
+        format:
+          type: string
+          description: Formát datového pole
+        lov:
+          type: string
+          description: Název číselníku
+        collect:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        order:
+          type: number
+        unit:
+          type: string
+        currency:
+          type: string
+        roundType:
+          type: string
+        isTariff:
+          type: boolean
+        lovValues:
+          type: array
+          items:
+            type: string
+        groupId:
+          type: array
+          items:
+            type: string
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        extendedData:
+          $ref: '#/components/schemas/FieldExtendedDataPD'
+    FieldWithFIDPD:
+      type: object
+      properties:
+        fid:
+          type: string
+          description: ID pole pro sjednávač bez tečkové notace
+        id:
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        name:
+          type: string
+          description: Název pole
+        mandatory:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        type:
+          type: string
+          description: Typ datového pole
+        default:
+          type: string
+          description: Výchozí hodnota
+        format:
+          type: string
+          description: Formát datového pole
+        lov:
+          type: string
+          description: Název číselníku
+        collect:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        order:
+          type: number
+        unit:
+          type: string
+        currency:
+          type: string
+        roundType:
+          type: string
+        isTariff:
+          type: boolean
+        lovValues:
+          type: array
+          items:
+            type: string
+        groupId:
+          type: array
+          items:
+            type: string
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+        constraint:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConstraintPD'
+        extendedData:
+          $ref: '#/components/schemas/FieldExtendedDataPD'
+    BusinessAuthorizationPD:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        businessAuthorizationKind:
+          $ref: '#/components/schemas/FieldPD'
+        businessAuthorizationDate:
+          $ref: '#/components/schemas/FieldPD'
+        businessAuthorizationExtId:
+          $ref: '#/components/schemas/FieldPD'
+        businessAuthorizationDescription:
+          $ref: '#/components/schemas/FieldPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+    ValidationPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        valType:
+          type: string
+        order:
+          type: number
+        predicate:
+          $ref: '#/components/schemas/RulePD'
+        severity:
+          type: string
+        message:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessagePartPD'
+        ruleCondition:
+          type: string
+        taxCode:
+          type: string
+    ConstraintPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        valType:
+          type: string
+        groupId:
+          type: string
+        rule:
+          type: string
+        severity:
+          type: string
+        message:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessagePartPD'
+        ruleCondition:
+          type: string
+    FieldExtendedDataPD:
+      type: object
+      properties:
+        order:
+          type: number
+        internal:
+          type: boolean
+        readOnly:
+          type: boolean
+        displayGroupCode:
+          type: string
+    MessagePartPD:
+      type: object
+      properties:
+        value:
+          type: string
+    ExpressionPD:
+      type: object
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldDefinitionPD'
+        valueString:
+          type: array
+          items:
+            type: string
+        valueNumber:
+          type: array
+          items:
+            type: number
+        valueDate:
+          type: array
+          items:
+            type: string
+            format: date-time
+        valueBoolean:
+          type: array
+          items:
+            type: boolean
+    RuleWithBooleanPD:
+      type: object
+      properties:
+        default:
+          type: boolean
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleWithBooleanInnerPD'
+    RuleWithBooleanInnerPD:
+      type: object
+      properties:
+        ruleCompare:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleComparePD'
+        ruleBooleanTrue:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanTruePD'
+        ruleBooleanFalse:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanFalsePD'
+        ruleBooleanNull:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanNullPD'
+        ruleBooleanNotNull:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanNotNullPD'
+    RulePD:
+      type: object
+      properties:
+        ruleCompare:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleComparePD'
+        ruleBooleanTrue:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanTruePD'
+        ruleBooleanFalse:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanFalsePD'
+        ruleBooleanNull:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanNullPD'
+        ruleBooleanNotNull:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleBooleanNotNullPD'
+        ruleRangeText:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleRangeTextPD'
+        ruleRangeNumber:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleRangeNumberPD'
+    RuleComparePD:
+      type: object
+      properties:
+        leftSide:
+          $ref: '#/components/schemas/ExpressionPD'
+        rightSide:
+          $ref: '#/components/schemas/ExpressionPD'
+        sign:
+          type: string
+          enum:
+            - <
+            - '>'
+            - '='
+            - '!='
+            - <=
+            - '>='
+            - in
+    RuleRangeNumberPD:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+        step:
+          type: number
+    RuleRangeTextPD:
+      type: object
+      properties:
+        minLength:
+          type: number
+        maxLength:
+          type: number
+    RuleBooleanTruePD:
+      type: object
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldDefinitionPD'
+    RuleBooleanFalsePD:
+      type: object
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldDefinitionPD'
+    RuleBooleanNullPD:
+      type: object
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldDefinitionPD'
+    RuleBooleanNotNullPD:
+      type: object
+      properties:
+        fieldId:
+          $ref: '#/components/schemas/FieldDefinitionPD'
+    CoinsurabilityItemPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        sourceCondition:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        rule:
+          type: string
+        targetEntity:
+          type: string
+        targetEntityCode:
+          type: string
+        targetCondition:
+          $ref: '#/components/schemas/RuleWithBooleanPD'
+        ruleCondition:
+          type: string
+        message:
+          type: string
+    FieldDefinitionPD:
+      type: object
+      properties:
+        entity:
+          type: string
+        entityCode:
+          type: string
+        entityAttribute:
+          type: string
+    StaticDocPD:
+      type: object
+      properties:
+        code:
+          type: string
+        staticDocCode:
+          type: string
+    AttachmentPD:
+      type: object
+      properties:
+        code:
+          type: string
+        attachmentDutyKind:
+          type: string
+        attachmentNop:
+          type: string
+        docuType:
+          type: string
+    SpecialAgreementPD:
+      type: object
+      properties:
+        code:
+          type: string
+        specialAgreementCode:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        name:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        coinsurability:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoinsurabilityItemPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+    FreeAgreementPD:
+      type: object
+      properties:
+        code:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldPD'
+        freeAgreementText:
+          $ref: '#/components/schemas/FieldPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+    EntityExtendedDataPD:
+      type: object
+      properties:
+        order:
+          type: number
+        objectTypeCode:
+          type: string
+    BusinessPartnerPD:
+      required:
+        - partnerType
+      type: object
+      properties:
+        partnerCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód partnera
+        partnerType:
+          type: string
+        nationalities:
+          type: array
+          items:
+            $ref: '#/components/schemas/NationalityPD'
+        personIdentification:
+          $ref: '#/components/schemas/PersonIdentificationPD'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentPD'
+        legalEntityIdentification:
+          $ref: '#/components/schemas/LegalEntityIdentificationPD'
+        emails:
+          type: array
+          description: Emaily
+          items:
+            $ref: '#/components/schemas/EmailPD'
+        phones:
+          type: array
+          description: Telefonní čísla osoby
+          items:
+            $ref: '#/components/schemas/PhonePD'
+        databoxes:
+          type: array
+          description: Datové schránky partnera
+          items:
+            type: string
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentPD'
+        addresses:
+          type: array
+          description: Adresy
+          items:
+            $ref: '#/components/schemas/AddressPD'
+      description: Partner
+    PersonIdentifierPD:
+      required:
+        - id
+        - type
+      type: object
+      properties:
+        id:
+          maxLength: 20
+          minLength: 1
+          type: string
+          description: ID dokladu
+        type:
+          type: string
+      description: Identifikátor osoby
+    PersonIdentificationPD:
+      type: object
+      properties:
+        firstName:
+          minLength: 1
+          type: string
+          description: Jméno
+        surname:
+          minLength: 1
+          type: string
+          description: Příjmení
+        birthDate:
+          type: string
+          description: Datum narození
+          format: date
+        personIdentifier:
+          $ref: '#/components/schemas/PersonIdentifierPD'
+      description: Údaje o osobě
+    DocumentPD:
+      type: object
+      properties:
+        number:
+          type: string
+        type:
+          type: string
+          description: Hodota z ciselniku (lov_identity_document_type)
+      description: Dokumenty partnera
+    LegalEntityIdentifierPD:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Hodnota IČO / zahraničního identifikátoru
+        type:
+          type: string
+          description: Hodnota z ciselniku (lov_identity_document_type)
+    LegalEntityIdentificationPD:
+      type: object
+      properties:
+        companyName:
+          type: string
+          description: Název právnické osoby
+        legalEntityIdentifier:
+          $ref: '#/components/schemas/LegalEntityIdentifierPD'
+      description: Identifikační údaje právnické osoby
+    EmailPD:
+      type: object
+      properties:
+        email:
+          minLength: 1
+          type: string
+          description: Emailová adresa
+        electronicCommunication:
+          type: boolean
+      description: Email
+    PhonePD:
+      type: object
+      properties:
+        number:
+          minLength: 1
+          type: string
+          description: Telefonní číslo
+        connectionType:
+          type: string
+        country:
+          type: string
+        electronicCommunication:
+          type: boolean
+      description: Údaje o telefonu
+    ConsentPD:
+      type: object
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+      description: Souhlas
+    AddressCommon:
+      type: object
+      properties:
+        houseNumber:
+          type: string
+          description: Číslo popisné
+        landmarkNumber:
+          type: string
+          description: Číslo orientační
+        postalZipCode:
+          type: string
+          description: PSČ
+      description: Udaje k adrese
+    AddressPD:
+      allOf:
+        - $ref: '#/components/schemas/AddressCommon'
+        - type: object
+          properties:
+            houseNumber:
+              type: string
+            landmarkNumber:
+              type: string
+            postalZipCode:
+              type: string
+            street:
+              type: string
+            municipality:
+              type: string
+            municipalityPart:
+              type: string
+            urbanDistrict:
+              type: string
+            district:
+              type: string
+            type:
+              type: string
+              description: Typ adresy (číselník lov_address_type)
+            country:
+              type: string
+              description: Krajina (ciselnil lov_country)
+          description: Údaje o adrese
+    LocationPD:
+      type: object
+      properties:
+        locationLinkUuid:
+          type: string
+        insuredLocationUuid:
+          type: string
+        address:
+          $ref: '#/components/schemas/LocationAddressPD'
+        parcel:
+          $ref: '#/components/schemas/LocationParcelPD'
+      description: Lokalita (adresa nebo parcela)
+    LocationAddressPD:
+      description: Popis objektu adresy
+      allOf:
+        - $ref: '#/components/schemas/AddressPD'
+        - type: object
+          properties:
+            district:
+              type: string
+    LocationParcelPD:
+      description: Popis parcely
+      allOf:
+        - $ref: '#/components/schemas/ParcelCommon'
+        - type: object
+          properties:
+            cadastralTerritoryName:
+              type: string
+            district:
+              type: string
+            municipality:
+              type: string
+    ParcelCommon:
+      type: object
+      properties:
+        identificationNumber:
+          type: integer
+        numberSubdivision:
+          type: integer
+        number:
+          type: string
+    AgentRolePD:
+      required:
+        - agentCode
+        - agentRoleOrder
+        - share
+        - userId
+      type: object
+      properties:
+        agentRoleOrder:
+          type: integer
+          description: Pořadí role agenta
+          format: int32
+        agentCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód agenta
+        userId:
+          type: integer
+          description: Id uživatele
+          format: int32
+        share:
+          type: number
+          description: Podíl
+        email:
+          maxLength: 50
+          type: string
+          description: Email získatele
+      description: Údaje o roli získatele
+    AdditionalInformationPD:
+      type: object
+      properties:
+        saveToSummary:
+          type: boolean
+        contractId:
+          type: integer
+    ContextPD:
+      type: object
+      properties:
+        businessProductCode:
+          type: string
+          description: Business kód produktu
+        businessProductVersion:
+          type: string
+          description: Verze produktu
+        userId:
+          type: integer
+          description: Id uživatele
+          format: int32
+        agentCode:
+          type: string
+          description: Kód agenta
+        requiredDocument:
+          type: string
+          description: požadovaný dokument
+        bpVariant:
+          type: string
+          description: Business Product Variant
+        arrangementChannel:
+          type: string
+    NationalityPD:
+      type: object
+      properties:
+        nationality:
+          type: string
+      description: Státní příslušnost partnera
+    SwaggerPD:
+      type: object
+      properties:
+        productDefinition:
+          type: string
+          description: Specifikace rozhraní z domény Calculators-core-be
+        calculation:
+          type: string
+          description: Specifikace rozhraní z domény SPO-proposal-be
+      description: Specifikace rozhraní (Swagger)
+    ChargePremiumPD:
+      type: object
+      properties:
+        calculatedHealthStatusCharge:
+          type: number
+        annualHealthStatusCharge:
+          type: number
+    ExclusionPD:
+      type: object
+      properties:
+        code:
+          type: string
+        exclusionType:
+          $ref: '#/components/schemas/FieldPD'
+        exclusions:
+          $ref: '#/components/schemas/FieldPD'
+        exclusionsMUW:
+          $ref: '#/components/schemas/FieldPD'
+      description: Field exclusions will be an array of codes, divided by comma
+    BusinessActivityPD:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        businessActivityKeyOutput:
+          $ref: '#/components/schemas/FieldPD'
+        businessActivityKey:
+          $ref: '#/components/schemas/FieldPD'
+        origin:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+    RegisteredBusinessActivityPD:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        minimumCount:
+          type: number
+        maximumCount:
+          type: number
+        registeredBusinessActivityKey:
+          $ref: '#/components/schemas/FieldPD'
+        registeredBusinessActivityKeyTimestamp:
+          $ref: '#/components/schemas/FieldPD'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationPD'
+    LayerPD:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        layerType:
+          $ref: '#/components/schemas/FieldPD'
+        uuid:
+          $ref: '#/components/schemas/FieldPD'
+        layerNumber:
+          $ref: '#/components/schemas/FieldPD'
+        determinationDate:
+          $ref: '#/components/schemas/FieldPD'
+        validFrom:
+          $ref: '#/components/schemas/FieldPD'
+        validTo:
+          $ref: '#/components/schemas/FieldPD'
+        delayPeriodStartFrom:
+          $ref: '#/components/schemas/FieldPD'
+        validFromTechnical:
+          $ref: '#/components/schemas/FieldPD'
+        technicalSumInsured:
+          $ref: '#/components/schemas/FieldPD'
+        sumInsured:
+          $ref: '#/components/schemas/FieldPD'
+        healthStatusChargePercent:
+          $ref: '#/components/schemas/FieldPD'
+        entryReserve:
+          $ref: '#/components/schemas/FieldPD'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFIDPD'
+        layerLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitPD'
+        chargePremium:
+          $ref: '#/components/schemas/ChargePremiumPD'
+    SubstitutedPoliciesResponse:
+      type: object
+      properties:
+        substitutedContractNumber:
+          type: string
+          example: '1234567890'
+        substitutionAllowed:
+          type: boolean
+        substitutionRejectionReason:
+          type: string
+          example: '1'
+    BusinessAuthorizationRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        businessAuthorizationKind:
+          $ref: '#/components/schemas/FieldCode'
+        businessAuthorizationDate:
+          $ref: '#/components/schemas/FieldDatetime'
+        businessAuthorizationExtId:
+          $ref: '#/components/schemas/FieldString'
+        businessAuthorizationDescription:
+          $ref: '#/components/schemas/FieldString'
+    BusinessAuthorizationResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        businessAuthorizationKind:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationExtId:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationDescription:
+          $ref: '#/components/schemas/FieldValidationResult'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    AddressTypeEnum:
+      type: string
+      enum:
+        - ADDRESS
+        - PARCEL
+        - GPS
+    GpsLocation:
+      type: object
+      properties:
+        gpsN:
+          type: number
+        gpsE:
+          type: number
+    GeoLocation:
+      allOf:
+        - $ref: '#/components/schemas/GpsLocation'
+        - type: object
+          properties:
+            geoX:
+              type: number
+            geoY:
+              type: number
+    RuianCodeAndNameLocArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/RuianCodeAndNameLoc'
+    RuianCodeAndNameLoc:
+      type: object
+      properties:
+        ruianCode:
+          type: integer
+        name:
+          type: string
+    AddressLoc:
+      allOf:
+        - $ref: '#/components/schemas/AddressCommon'
+        - $ref: '#/components/schemas/GeoLocation'
+        - type: object
+          properties:
+            countryCode:
+              type: string
+              description: Kód Krajiny
+              example: CZE
+            countryName:
+              type: string
+              description: Name z číselníku zemí LOV_COUNTRY pro kód CZE
+              example: ČESKÁ REPUBLIKA
+            addressLine1:
+              type: string
+              description: Adresní řádka
+            addressLine2:
+              type: string
+              description: Adresní řádka
+            addressLine3:
+              type: string
+              description: Adresní řádka
+            addressLine4:
+              type: string
+              description: Adresní řádka
+            addressPointRuianCode:
+              type: integer
+              description: Kód adresy v Ruian
+            postOfficeAddress:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            district:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            municipality:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            municipalityPart:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            urbanDistrict:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            street:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            specification:
+              type: string
+            isPermanent:
+              type: boolean
+    ParcelLoc:
+      allOf:
+        - $ref: '#/components/schemas/GeoLocation'
+        - $ref: '#/components/schemas/ParcelCommon'
+        - type: object
+          properties:
+            cadastralTerritory:
+              $ref: '#/components/schemas/RuianCodeAndNameLoc'
+            districts:
+              $ref: '#/components/schemas/RuianCodeAndNameLocArray'
+            municipalities:
+              $ref: '#/components/schemas/RuianCodeAndNameLocArray'
+            landUtilizationCode:
+              type: integer
+            landTypeCode:
+              type: integer
+            ruianCode:
+              type: integer
+            numberingTypeCode:
+              type: integer
+            parcelArea:
+              type: integer
+    BuildingLoc:
+      type: object
+      properties:
+        buildingTypeCode:
+          type: integer
+        utilizationCode:
+          type: integer
+        completion:
+          type: string
+        constructionTypeCode:
+          type: string
+        builtupSpace:
+          type: integer
+        numberOfApartments:
+          type: integer
+        numberOfFloors:
+          type: integer
+        floorArea:
+          type: integer
+        sewerageConnectionCode:
+          type: integer
+        gasConnectionCode:
+          type: integer
+        waterSupplyConnectionCode:
+          type: integer
+        elevatorTypeCode:
+          type: integer
+        builtupArea:
+          type: integer
+        heatingMethodCode:
+          type: integer
+        ruianCode:
+          type: integer
+    RiskZones:
+      type: object
+      properties:
+        burglaryRisk:
+          type: integer
+        robberyRisk:
+          type: integer
+        windstormRisk:
+          type: integer
+        floodRisk:
+          type: integer
+        valid:
+          type: string
+        ruianCode:
+          type: integer
+    Location:
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/AddressLoc'
+        parcel:
+          $ref: '#/components/schemas/ParcelLoc'
+        building:
+          $ref: '#/components/schemas/BuildingLoc'
+        riskZones:
+          $ref: '#/components/schemas/RiskZones'
+        gps:
+          $ref: '#/components/schemas/GpsLocation'
+    ProductDocumentsResponseCommon:
+      required:
+        - bpCode
+      type: object
+      properties:
+        bpCode:
+          type: string
+        bpVersion:
+          type: string
+        tpCode:
+          type: string
+        bpVariant:
+          type: string
+    ProductDocumentsResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProductDocumentsResponseCommon'
+        - type: object
+          properties:
+            documentFiles:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductDocument'
+    ProductDocumentsResponseByCode:
+      allOf:
+        - $ref: '#/components/schemas/ProductDocumentsResponseCommon'
+        - type: object
+          properties:
+            documentFile:
+              $ref: '#/components/schemas/ProductDocument'
+    ProductDocument:
+      required:
+        - documentCode
+        - documentName
+      type: object
+      properties:
+        documentCode:
+          type: string
+        documentName:
+          type: string
+        documentId:
+          type: string
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        fileUrl:
+          type: string
+    ProductLovsResponse:
+      required:
+        - bpCode
+      type: object
+      properties:
+        bpCode:
+          type: string
+        bpVersion:
+          type: string
+        lov:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductLov'
+        bpVariant:
+          type: string
+    ProductLov:
+      required:
+        - count
+        - lovCode
+      type: object
+      properties:
+        lovCode:
+          type: string
+        count:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductLovItem'
+    ProductLovItem:
+      required:
+        - additionalInfo
+        - code
+        - title
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        additionalInfo:
+          type: string
+    BusinessActivityRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '123456'
+        uuid:
+          type: string
+          example: 123e4567-e89b-12d3-a456-426614174000
+        businessActivityKey:
+          $ref: '#/components/schemas/FieldString'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    BusinessActivityResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '123456'
+        uuid:
+          type: string
+          example: 123e4567-e89b-12d3-a456-426614174000
+        businessActivityKey:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessActivityKeyOutput:
+          $ref: '#/components/schemas/FieldString'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+    LayerResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        layerType:
+          type: string
+        uuid:
+          type: string
+        layerNumber:
+          type: number
+        determinationDate:
+          type: string
+          format: date-time
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+        delayPeriodStartFrom:
+          type: string
+          format: date-time
+        validFromTechnical:
+          type: string
+          format: date-time
+        technicalSumInsured:
+          type: number
+        sumInsured:
+          type: number
+        healthStatusChargePercent:
+          type: number
+        premium:
+          $ref: '#/components/schemas/Premium'
+        healthStatusCharge:
+          type: number
+        entryReserve:
+          type: number
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID'
+        layerLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse'
+    ExclusionResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        exclusionType:
+          type: string
+        exclusions:
+          type: string
+          description: Array of codes, divided by comma
+        exclusionsMUW:
+          type: string
+    RegisteredBusinessActivityRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        registeredBusinessActivityKey:
+          $ref: '#/components/schemas/FieldString'
+        registeredBusinessActivityKeyTimestamp:
+          $ref: '#/components/schemas/FieldDatetime'
+    RegisteredBusinessActivityResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+        registeredBusinessActivityKey:
+          $ref: '#/components/schemas/FieldValidationResult'
+        registeredBusinessActivityKeyTimestamp:
+          $ref: '#/components/schemas/FieldValidationResult'
+    PartnerValidationRequest:
+      type: object
+      properties:
+        productCode:
+          type: string
+          enum:
+            - PMO
+        partners:
+          type: array
+          items:
+            $ref: '#/components/schemas/Partners'
+    Partners:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/PartnerRoleEnum'
+        partner:
+          $ref: '#/components/schemas/Partner'
+    Partner:
+      type: object
+      properties:
+        partnerType:
+          type: string
+          enum:
+            - FO
+            - FOP
+            - PO
+        nationalities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Nationality'
+        personIdentification:
+          $ref: '#/components/schemas/PersonIdentification'
+        legalEntityIdentification:
+          $ref: '#/components/schemas/LegalEntityIdentification'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        phones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Phone'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/Email'
+        bankAccounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankAccount'
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Consent'
+    Nationality:
+      type: object
+      properties:
+        recordOrder:
+          type: integer
+        nationality:
+          type: string
+    PersonIdentification:
+      type: object
+      properties:
+        firstName:
+          type: string
+        surname:
+          type: string
+        titleBefore:
+          type: string
+        titleAfter:
+          type: string
+        countryOrigin:
+          type: string
+        sex:
+          type: string
+        birthDate:
+          type: string
+          description: Datum narození
+          format: date
+          example: '2023-08-28'
+          x-field-extra-annotation: '@cz.aisservis.kotlin.common.api.SecretData'
+        personIdentifier:
+          $ref: '#/components/schemas/PersonIdentifier'
+    PersonIdentifier:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - rc
+            - passport
+            - id_card
+    LegalEntityIdentification:
+      type: object
+      properties:
+        companyName:
+          type: string
+        shortcut:
+          type: string
+        legalEntityIdentifier:
+          $ref: '#/components/schemas/LegalEntityIdentifier'
+        lei:
+          type: string
+    LegalEntityIdentifier:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - IC
+    Document:
+      type: object
+      properties:
+        number:
+          type: string
+        country:
+          type: string
+        type:
+          type: string
+          enum:
+            - OP
+            - PAS
+            - PP
+            - RP
+            - VOR
+            - ZL
+            - KOL
+            - ZPP
+        authority:
+          type: string
+        issueDate:
+          type: string
+          description: Datum vydání
+          format: date
+          example: '2023-08-28'
+        validTo:
+          type: string
+          description: Datum platnosti
+          format: date
+          example: '2023-08-28'
+    Address:
+      type: object
+      properties:
+        recordOrder:
+          type: integer
+        type:
+          type: string
+          enum:
+            - T
+            - O
+        address:
+          $ref: '#/components/schemas/AddressDetail'
+    AddressDetail:
+      type: object
+      properties:
+        addressPointRuianCode:
+          type: integer
+        houseNumber:
+          type: string
+        landmarkNumber:
+          type: string
+        countryCode:
+          type: string
+        postalZipCode:
+          type: string
+        municipality:
+          $ref: '#/components/schemas/Municipality'
+        street:
+          $ref: '#/components/schemas/Street'
+        addressLine1:
+          type: string
+    Municipality:
+      type: object
+      properties:
+        name:
+          type: string
+    Street:
+      type: object
+      properties:
+        name:
+          type: string
+    Phone:
+      type: object
+      properties:
+        number:
+          type: string
+        connectionType:
+          type: string
+          enum:
+            - M
+            - P
+            - W
+            - F
+        electronicCommunication:
+          type: boolean
+        country:
+          type: string
+    Email:
+      type: object
+      properties:
+        email:
+          type: string
+        electronicCommunication:
+          type: boolean
+    BankAccount:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        bankCode:
+          type: string
+        iban:
+          type: string
+        bankCountry:
+          type: string
+        swift:
+          type: string
+    PartnerResult:
+      type: object
+      properties:
+        partnerIndex:
+          type: integer
+        role:
+          $ref: '#/components/schemas/PartnerRoleEnum'
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerValidationError'
+    Consent:
+      type: object
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+    PartnerRoleEnum:
+      type: string
+      description: >-
+        Definuje rolu partnera v rámci kontraktu (Pojistník, Pojištěný,
+        Jednající osoba).
+      enum:
+        - POLICYHOLDER
+        - INSURED_PERSON
+        - ACTING_PERSON
+    PartnerValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        hasErrors:
+          type: boolean
+        hasWarnings:
+          type: boolean
+        partnerResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerResult'
+        globalErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerValidationError'
+    PartnerValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          description: >
+            Závažnost chyby. * `INFO` - Informativní zpráva. * `WARNING` -
+            Upozornění, neblokuje proces. * `ERROR` - Kritická chyba, validace
+            selhala.
+          enum:
+            - INFO
+            - WARNING
+            - ERROR
+        field:
+          type: string
+        description:
+          type: string
+  responses:
+    BadRequest:
+      description: Nevalidní požadavek
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Neautorizováno
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ItemNotFound:
+      description: Objekt nenalezen
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Chyba na serveru
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  parameters:
+    HeaderCorrelationId:
+      name: X-Correlation-Id
+      in: header
+      description: Korelační ID na vazbu mezi BE/FE v byznys procesu. Formát UUID.
+      required: false
+      style: simple
+      explode: false
+      schema:
+        maxLength: 36
+        type: string
+    HeaderActivityId:
+      name: X-Activity-Id
+      in: header
+      description: ID aktivity (usecase). Formát UUID.
+      required: false
+      style: simple
+      explode: false
+      schema:
+        maxLength: 36
+        type: string
+  headers:
+    X-Correlation-Id:
+      description: >-
+        Korelační ID na vazbu mezi BE/FE v byznys procesu. Doporučený formát je
+        UUID
+      required: false
+      style: simple
+      explode: false
+      schema:
+        maxLength: 36
+        type: string
+  securitySchemes:
+    default:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://api-gwext.dev.cpp.appl.services/authorize
+          scopes: {}
