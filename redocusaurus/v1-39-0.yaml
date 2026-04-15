@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
   title: Webové služby
   description: >
@@ -6,6 +6,11 @@ info:
     poskytovat kompletní technickou a byznysovou definici produktu na základě
     jeho kódu.
   version: 1.39.0
+servers:
+  - url: https://api-gw.dev.cpp.appl.services/dev/spo/proposal/v1
+externalDocs:
+  description: API Dokumentace
+  url: https://confluence.vig.cz/display/NEU/SPO-proposal-be
 security:
   - default: []
 tags:
@@ -125,65 +130,6 @@ tags:
        </soapenv:Body>
        </soapenv:Envelope>
       ```
-  - name: produktPodpora
-    x-traitTag: false
-    description: >
-      | Verze dokumentu | V1.39.0 |
-
-      | :--- | :--- |
-
-      | **Služby** | definiceProduktu, ciselnikyProduktu |
-
-      | **SUS Plus - Test** |
-      `https://susp-ws-test2.cpp.cz:443/knz-ws/ProduktPodporaWS` |
-
-      | **SUS Plus - Provoz** |
-      `https://susp-ws.cpp.cz:443/knz-ws/ProduktPodporaWS` |
-
-
-      ### Příklad requestu ciselnikyProduktu
-
-      Samotné byznysové volání metody (např. definiceProduktu) se nachází v
-      části `<soapenv:Body>`.
-
-      ##### Příklad requestu:
-
-      ```xml
-       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:prod="http://produkt.app.ws.knz.aisservis.cz/">
-        <soapenv:Header>
-        <prod:ws_ucet>
-        <jmeno>UŽIVATELSKÉ_JMÉNO</jmeno>
-        <heslo>HESLO</heslo>
-        </prod:ws_ucet>
-        </soapenv:Header>
-        <soapenv:Body>
-        <prod:ciselnikyProduktu>
-        <kod>D01</kod>
-        </prod:ciselnikyProduktu>
-        </soapenv:Body>
-        </soapenv:Envelope>
-      ```      
-
-      ### Příklad requestu definiceProduktu
-
-
-      ##### Příklad requestu:
-
-      ```xml
-       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:prod="http://produkt.app.ws.knz.aisservis.cz/">
-       <soapenv:Header>
-       <prod:ws_ucet>
-       <jmeno>UŽIVATELSKÉ_JMÉNO</jmeno>
-       <heslo>HESLO</heslo>
-       </prod:ws_ucet>
-       </soapenv:Header>
-       <soapenv:Body>
-       <prod:definiceProduktu>
-       <kod>D01</kod>
-       <nadrazena_smlouva>N0001</nadrazena_smlouva>
-       </prod:definiceProduktu>
-       </soapenv:Body>
-       </soapenv:Envelope>
   - name: produktSjednání
     x-traitTag: false
     description: >
@@ -582,6 +528,127 @@ paths:
         security-types:
           - oauth2
         optional: false
+  /api-2/ws/contracts/calculations:
+    post:
+      tags:
+        - produktSjednání
+      summary: Metóda kalkulace smlouvy
+      description: >
+        Pro předaná data volá ověření adres, případné ocenění a kalkulaci
+        (runModelation v8)
+
+        Případně předá příznak, zda se data mají uložit do DB
+      operationId: wsCalculations
+      parameters:
+        - $ref: '#/components/parameters/HeaderCorrelationId'
+        - $ref: '#/components/parameters/HeaderActivityId'
+      requestBody:
+        description: Požadavek na uložení a kalkulaci smlouvy
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WsContractRequest'
+        required: true
+      responses:
+        '201':
+          description: Smlouva byla kalkulována a případně uložena
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsContractResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized1'
+        '404':
+          $ref: '#/components/responses/ItemNotFound1'
+        '500':
+          $ref: '#/components/responses/InternalServerError1'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+  /api-2/ws/contracts/check:
+    post:
+      tags:
+        - produktSjednání
+      summary: Metóda kontrola smlouvy
+      description: >
+        Pro předaná data volá ověření adres, případné ocenění a kalkulaci
+        (runModelation v8)
+
+        Případně předá příznak, zda se data mají uložit do DB
+      operationId: wsContractCheck
+      parameters:
+        - $ref: '#/components/parameters/HeaderCorrelationId'
+        - $ref: '#/components/parameters/HeaderActivityId'
+      requestBody:
+        description: Požadavek na uložení a kalkulaci smlouvy
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WsContractRequest'
+        required: true
+      responses:
+        '201':
+          description: Smlouva byla kalkulována a případně uložena
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsContractResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized1'
+        '404':
+          $ref: '#/components/responses/ItemNotFound1'
+        '500':
+          $ref: '#/components/responses/InternalServerError1'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+  /api-2/ws/contracts/completion:
+    post:
+      tags:
+        - produktSjednání
+      summary: Metóda kompletace smlouvy
+      description: >
+        Pro předaná data volá ověření partnera, adres, případné ocenění
+        pojištěných objektů a kalkulaci 
+
+        (runModelation v8). Smlouva se následně uloží do DB, zkompletuje a pošle
+        do kafky
+      operationId: wsContractCompletion
+      parameters:
+        - $ref: '#/components/parameters/HeaderCorrelationId'
+        - $ref: '#/components/parameters/HeaderActivityId'
+      requestBody:
+        description: Požadavek na kompletaci smlouvy
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WsContractCompletionRequest'
+        required: true
+      responses:
+        '201':
+          description: Smlouva byla zkompletována
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsContractCompletionResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized1'
+        '404':
+          $ref: '#/components/responses/ItemNotFound1'
+        '500':
+          $ref: '#/components/responses/InternalServerError1'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
 components:
   schemas:
     ErrorResponse:
@@ -1670,12 +1737,12 @@ components:
           type: string
           description: datum a čas
           format: date-time
-          example: '2023-08-28T12:34:56+02:00'
+          example: '2023-08-28T10:34:56.000Z'
         valueDate:
           type: string
           description: datum
           format: date
-          example: '2023-08-28'
+          example: '2023-08-28T00:00:00.000Z'
         code:
           type: string
           description: Kód z číselníku
@@ -1699,7 +1766,7 @@ components:
         attributes:
           type: array
           items:
-            $ref: '#/components/schemas/FieldWithFID'
+            $ref: '#/components/schemas/FieldWithFID1'
         validation:
           type: array
           items:
@@ -4566,7 +4633,7 @@ components:
           type: string
           description: Datum narození
           format: date
-          example: '2023-08-28'
+          example: '2023-08-28T00:00:00.000Z'
           x-field-extra-annotation: '@cz.aisservis.kotlin.common.api.SecretData'
         personIdentifier:
           $ref: '#/components/schemas/PersonIdentifier'
@@ -4625,12 +4692,12 @@ components:
           type: string
           description: Datum vydání
           format: date
-          example: '2023-08-28'
+          example: '2023-08-28T00:00:00.000Z'
         validTo:
           type: string
           description: Datum platnosti
           format: date
-          example: '2023-08-28'
+          example: '2023-08-28T00:00:00.000Z'
     Address:
       type: object
       properties:
@@ -4775,12 +4842,3217 @@ components:
           type: string
         description:
           type: string
+    ContractRequest:
+      required:
+        - biopod
+        - disbio
+        - idAdmUser
+        - idAgentRelationship
+        - modelationRequest
+        - mpos
+        - pnd
+      type: object
+      properties:
+        idAdmUser:
+          type: integer
+          description: KNZ ID uživatele
+          format: int32
+        idAgentRelationship:
+          type: integer
+          description: ID vazby na agenta
+          format: int32
+        biopod:
+          maxLength: 1
+          minLength: 1
+          type: string
+          description: Příznak biopodpisu
+        pnd:
+          maxLength: 1
+          minLength: 1
+          type: string
+          description: Příznak prodeje na dálku
+        mpos:
+          maxLength: 1
+          minLength: 1
+          type: string
+          description: Příznak sjednání na MPOS
+        disbio:
+          maxLength: 1
+          minLength: 1
+          type: string
+          description: Příznak distančního biopodpisu
+        name:
+          type: string
+          description: Název
+        idReq:
+          type: integer
+          description: ID potreby
+          format: int32
+        idAppointment:
+          type: integer
+          description: ID schůzky
+          format: int32
+        agentRoles:
+          type: array
+          description: Role získatelů
+          items:
+            $ref: '#/components/schemas/AgentRole'
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartner'
+        locations:
+          $ref: '#/components/schemas/Locations'
+        contractAttributes:
+          type: array
+          description: Doplňující atributy contractu
+          items:
+            $ref: '#/components/schemas/ContractAttribute'
+        substitution:
+          $ref: '#/components/schemas/Substitution'
+        oneClick:
+          $ref: '#/components/schemas/OneClick'
+        insurerNotice:
+          $ref: '#/components/schemas/InsurerNotice'
+        modelationRequest:
+          $ref: '#/components/schemas/ModelationRequest'
+      description: Požadavek na uložení/update smlouvy
+    ContractCompletionRequest:
+      required:
+        - signMethod
+      type: object
+      properties:
+        signMethod:
+          minLength: 1
+          type: string
+          description: Zvolená metoda podpisu
+      description: Požadavek na kompletaci kontraktu
+    ContractCompletionResponse:
+      required:
+        - contractNumber
+      type: object
+      properties:
+        contractNumber:
+          type: string
+          description: Číslo smlouvy
+        paymentUrl:
+          type: string
+          description: URL platby
+        documentId:
+          type: string
+          description: ID dokumentu
+          format: uuid
+        documentFile:
+          $ref: '#/components/schemas/ContractDocumentFile1'
+      description: Odpověd kompletace kontraktu
+    ContractCopyRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+          description: KNZ ID uživatele
+          format: int32
+        agentCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kodzi uživatele
+        description:
+          maxLength: 100
+          minLength: 0
+          type: string
+          description: Popis kalkulace
+      description: Požadavek na kopii smlouvy
+    ContractCopyResponse:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Id návrhu smlouvy
+          format: int32
+      description: Odpověd kopie smlouvy
+    SaveContractResponse:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+      description: Odpověd po uložení kontraktu
+    ContractResponse:
+      type: object
+      properties:
+        contractNumber:
+          type: string
+          description: číslo pojistné smlouvy
+        contractState:
+          type: string
+          description: stav smlouvy
+        idReq:
+          type: integer
+          description: ID potreby
+          format: int32
+        idAppointment:
+          type: integer
+          description: ID schůzky
+          format: int32
+      description: Odpověd na získání dat o kontraktu
+      allOf:
+        - $ref: '#/components/schemas/ContractData'
+    ContractData:
+      required:
+        - modelationRequest
+        - modelationResponse
+      type: object
+      properties:
+        idAdmUser:
+          type: integer
+          description: KNZ ID uživatele
+          format: int32
+        idAgentRelationship:
+          type: integer
+          description: ID vazby na agenta
+          format: int32
+        name:
+          type: string
+          description: Název
+        biopod:
+          type: string
+          description: Příznak biopodpisu
+        pnd:
+          type: string
+          description: Příznak prodeje na dálku
+        mpos:
+          type: string
+          description: Příznak sjednání na MPOS
+        disbio:
+          type: string
+          description: Příznak distančního biopodpisu
+        contractSignMethod:
+          type: string
+          description: metoda podpisu smlouvy
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartner'
+        agentRoles:
+          type: array
+          description: Role získatelů
+          items:
+            $ref: '#/components/schemas/AgentRole'
+        locations:
+          $ref: '#/components/schemas/Locations'
+        contractAttributes:
+          type: array
+          description: Doplňující atributy contractu
+          items:
+            $ref: '#/components/schemas/ContractAttribute'
+        substitution:
+          $ref: '#/components/schemas/Substitution'
+        oneClick:
+          $ref: '#/components/schemas/OneClick'
+        insurerNotice:
+          $ref: '#/components/schemas/InsurerNotice'
+        signMethodAttributes:
+          $ref: '#/components/schemas/SignMethodAttributes'
+        modelationRequest:
+          $ref: '#/components/schemas/ModelationRequest'
+        modelationResponse:
+          $ref: '#/components/schemas/ModelationResponse'
+      description: Data kontraktu uložená v tabulce ObjContractData
+    Person:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          description: Kód partnera
+        versionUuid:
+          type: string
+          description: UID verze partnera
+          format: uuid
+        emailUuid:
+          type: string
+          description: Kontaktní email
+          format: uuid
+        phoneUuid:
+          type: string
+          description: Kontaktní telefon
+          format: uuid
+        addressUuid:
+          type: string
+          description: Kontaktní adresa
+          format: uuid
+        representedPartnerCode:
+          type: string
+          description: Kód k.l. zastupovaného partnera
+        partnerFunction:
+          type: string
+          description: Funkce partnera
+        isAppointmentActingPerson:
+          type: boolean
+          description: Priznak, zda je jednajici osoba ze schuzky
+    Representation:
+      required:
+        - person
+        - recOrder
+        - representationValidFrom
+        - roleCode
+      type: object
+      properties:
+        recOrder:
+          type: integer
+          description: Pořadí zastoupení
+        representationValidFrom:
+          type: string
+          description: Zastupuje od
+          format: date-time
+        representationValidTo:
+          type: string
+          description: Zastupuje do
+          format: date-time
+        roleCode:
+          type: string
+          description: Kód role zástupce
+        person:
+          $ref: '#/components/schemas/Person'
+        actingPerson:
+          $ref: '#/components/schemas/Person'
+    BusinessPartner:
+      required:
+        - partnerCode
+        - versionUuid
+      type: object
+      properties:
+        representatives:
+          type: array
+          description: Seznam zástupců
+          items:
+            $ref: '#/components/schemas/Representation'
+        partnerCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód partnera
+        addressUuid:
+          type: string
+          description: uuid kontaktní adresy
+          format: uuid
+        versionUuid:
+          type: string
+          description: UUID identifikátor
+          format: uuid
+        consents:
+          type: array
+          description: Souhlasy
+          items:
+            $ref: '#/components/schemas/Consent1'
+      description: Partner
+    Nationality1:
+      type: object
+      properties:
+        nationality:
+          type: string
+      description: Státní příslušnost partnera
+    PersonIdentification1:
+      type: object
+      properties:
+        firstName:
+          minLength: 1
+          type: string
+          description: Jméno
+        surname:
+          minLength: 1
+          type: string
+          description: Příjmení
+        birthDate:
+          type: string
+          description: Datum narození
+          format: date
+        personIdentifier:
+          $ref: '#/components/schemas/PersonIdentifier1'
+      description: Údaje o osobě
+    PersonIdentifier1:
+      required:
+        - id
+        - type
+      type: object
+      properties:
+        id:
+          maxLength: 20
+          minLength: 1
+          type: string
+          description: ID dokladu
+        type:
+          type: string
+      description: Identifikátor osoby
+    Phone1:
+      required:
+        - number
+      type: object
+      properties:
+        number:
+          minLength: 1
+          type: string
+          description: Telefonní číslo
+        connectionType:
+          type: string
+        country:
+          type: string
+        electronicCommunication:
+          type: boolean
+      description: Údaje o telefonu
+    DocumentWS:
+      type: object
+      properties:
+        number:
+          type: string
+        type:
+          type: string
+          description: Hodota z ciselniku (lov_identity_document_type)
+      description: Dokumenty partnera
+    LegalEntityIdentifier1:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Hodnota IČO / zahraničního identifikátoru
+        type:
+          type: string
+          description: Hodnota z ciselniku (lov_identity_document_type)
+    LegalEntityIdentification1:
+      type: object
+      properties:
+        companyName:
+          type: string
+          description: Název právnické osoby
+        legalEntityIdentifier:
+          $ref: '#/components/schemas/LegalEntityIdentifier1'
+      description: Identifikační údaje právnické osoby
+    EmailWS:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          minLength: 1
+          type: string
+          description: Emailová adresa
+        electronicCommunication:
+          type: boolean
+      description: Email
+    Email1:
+      required:
+        - email
+      type: object
+      description: Email
+      allOf:
+        - $ref: '#/components/schemas/EmailWS'
+        - properties:
+            preferred:
+              type: boolean
+    Address1:
+      type: object
+      properties:
+        neuronUuid:
+          type: string
+          description: UUID identifikace v Neuronu
+          format: uuid
+        type:
+          type: string
+        preferred:
+          type: boolean
+          description: Preferovaná adresa
+        addressPointRuianCode:
+          type: integer
+          description: Kód adresy v Ruian
+        street:
+          type: string
+          description: Ulice
+        streetRuianCode:
+          type: integer
+          description: Kód ulice v Ruian
+        houseNumber:
+          type: string
+          description: Číslo popisné
+        landmarkNumber:
+          type: string
+          description: Číslo orientační
+        municipality:
+          type: string
+          description: Obec
+        municipalityRuianCode:
+          type: integer
+          description: Kód obce v Ruain
+        municipalityPart:
+          type: string
+          description: Část obce
+        municipalityPartRuianCode:
+          type: integer
+          description: Kód části obce v Ruain
+        urbanDistrict:
+          type: string
+          description: Městská část
+        urbanDistrictRuianCode:
+          type: integer
+          description: Kód městské části v Ruian
+        district:
+          type: string
+          description: Okres
+        districtRuianCode:
+          type: integer
+          description: Kód okresu v Ruian
+        postalZipCode:
+          type: string
+          description: PSČ
+        postOffice:
+          type: string
+          description: Pošta
+        country:
+          type: string
+        addressLine1:
+          type: string
+          description: Adresní řádka
+        addressLine2:
+          type: string
+          description: Adresní řádka
+        addressLine3:
+          type: string
+          description: Adresní řádka
+        addressLine4:
+          type: string
+          description: Adresní řádka
+        note:
+          type: string
+          description: Poznámka k adrese
+      description: Údaje o adrese
+    Consent1:
+      type: object
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+      description: Souhlas
+    AgentRoleCodeEnum:
+      type: string
+      description: Kód role agenta
+      enum:
+        - POD
+        - ZIS
+        - ADMIN
+    AgentRoleDeductEnum:
+      type: string
+      description: Příznak odečtu
+      enum:
+        - 'Y'
+        - 'N'
+    AgentRoleCommon:
+      type: object
+      properties:
+        idZisVztah:
+          type: integer
+          description: Id vztahu získatele
+          format: int32
+          nullable: true
+        agentRoleCode:
+          $ref: '#/components/schemas/AgentRoleCodeEnum'
+        agentRoleOrder:
+          type: integer
+          description: Pořadí role agenta
+          format: int32
+          nullable: true
+        agentCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód agenta
+          nullable: true
+        userId:
+          type: integer
+          description: Id uživatele
+          format: int32
+          nullable: true
+        deduct:
+          $ref: '#/components/schemas/AgentRoleDeductEnum'
+        share:
+          type: number
+          description: Podíl
+          nullable: true
+        subscriber:
+          type: boolean
+          description: Odběratel
+          nullable: true
+        submitter:
+          type: boolean
+          description: Zadavatel
+          nullable: true
+        email:
+          maxLength: 50
+          type: string
+          description: Email získatele
+        brokerTypeCode:
+          type: number
+          description: Typ získatele
+          format: int32
+          nullable: true
+        exclusivity:
+          type: boolean
+      description: Údaje o roli získatele
+    AgentRole:
+      required:
+        - agentCode
+        - agentRoleCode
+        - agentRoleOrder
+        - brokerTypeCode
+        - deduct
+        - idZisVztah
+        - share
+        - submitter
+        - subscriber
+        - userId
+      type: object
+      description: Údaje o roli získatele
+      allOf:
+        - $ref: '#/components/schemas/AgentRoleCommon'
+    AgentRoleWS:
+      required:
+        - agentCode
+        - agentRoleOrder
+        - share
+        - userId
+      type: object
+      description: Údaje o roli získatele
+      allOf:
+        - $ref: '#/components/schemas/AgentRoleCommon'
+    LocationsWS:
+      type: array
+      description: Popis adresních míst (adresy, parcely..)
+      items:
+        $ref: '#/components/schemas/LocationWS'
+    LocationWS:
+      type: object
+      properties:
+        locationLinkUuid:
+          type: string
+          format: uuid
+        insuredLocationUuid:
+          type: string
+          format: uuid
+        address:
+          $ref: '#/components/schemas/LocationAddressWS'
+        parcel:
+          $ref: '#/components/schemas/LocationParcelWS'
+      description: Popis adresniho mista
+    LocationAddressWS:
+      type: object
+      properties:
+        houseNumber:
+          type: string
+        landmarkNumber:
+          type: string
+        postalZipCode:
+          type: string
+        street:
+          type: string
+        municipality:
+          type: string
+        municipalityPart:
+          type: string
+        urbanDistrict:
+          type: string
+        district:
+          type: string
+    AddressWS:
+      type: object
+      description: Adresa
+      allOf:
+        - $ref: '#/components/schemas/LocationAddressWS'
+        - properties:
+            type:
+              type: string
+              description: Typ adresy (číselník lov_address_type)
+            postalZipCode:
+              type: string
+              description: PSČ
+            country:
+              type: string
+              description: Krajina (ciselnil lov_country)
+    LocationParcelWS:
+      type: object
+      properties:
+        identificationNumber:
+          type: integer
+          format: int32
+        numberSubdivision:
+          type: integer
+          format: int32
+        number:
+          type: string
+        cadastralTerritoryName:
+          type: string
+        district:
+          type: string
+        municipality:
+          type: string
+    Locations:
+      type: array
+      description: Popis adresních míst (adresy, parcely..)
+      items:
+        $ref: '#/components/schemas/Location1'
+    Location1:
+      required:
+        - insuredLocationUuid
+        - locationLinkUuid
+      type: object
+      properties:
+        locationLinkUuid:
+          type: string
+          description: Uuid pro propojeni s locationSpecification z requestu na modelaci
+          format: uuid
+        insuredLocationUuid:
+          type: string
+          description: Uuid pro propojeni s insuredLocation z requestu na modelaci
+          format: uuid
+        groupUuid:
+          type: string
+          description: Uuid skupiny adresních míst
+          format: uuid
+        address:
+          $ref: '#/components/schemas/LocationAddress'
+        parcel:
+          $ref: '#/components/schemas/LocationParcel'
+        building:
+          $ref: '#/components/schemas/LocationBuilding'
+        riskZones:
+          $ref: '#/components/schemas/LocationRiskZones'
+      description: Popis adresniho mista
+    LocationAddress:
+      type: object
+      properties:
+        addressPointRuianCode:
+          type: integer
+          format: int64
+        houseNumber:
+          type: string
+        landmarkNumber:
+          type: string
+        countryCode:
+          type: string
+        countryName:
+          type: string
+        postOfficeAddress:
+          $ref: '#/components/schemas/LocationAddressPart'
+        postalZipCode:
+          type: string
+        district:
+          $ref: '#/components/schemas/LocationAddressPart'
+        municipality:
+          $ref: '#/components/schemas/LocationAddressPart'
+        municipalityPart:
+          $ref: '#/components/schemas/LocationAddressPart'
+        urbanDistrict:
+          $ref: '#/components/schemas/LocationAddressPart'
+        street:
+          $ref: '#/components/schemas/LocationAddressPart'
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        addressLine3:
+          type: string
+        addressLine4:
+          type: string
+        geoX:
+          type: number
+        geoY:
+          type: number
+        gpsN:
+          type: number
+        gpsE:
+          type: number
+        specification:
+          type: string
+        isPermanent:
+          type: boolean
+    LocationParcel:
+      type: object
+      properties:
+        cadastralTerritory:
+          $ref: '#/components/schemas/LocationAddressPart'
+        district:
+          $ref: '#/components/schemas/LocationAddressPart'
+        municipality:
+          $ref: '#/components/schemas/LocationAddressPart'
+        identificationNumber:
+          type: integer
+        landUtilizationCode:
+          type: integer
+          format: int32
+        landTypeCode:
+          type: integer
+          format: int32
+        numberSubdivision:
+          type: integer
+        number:
+          type: string
+        parcelArea:
+          type: number
+        numberingTypeCode:
+          type: integer
+          format: int32
+        geoX:
+          type: number
+        geoY:
+          type: number
+        gpsN:
+          type: number
+        gpsE:
+          type: number
+        ruianCode:
+          type: integer
+          format: int64
+    LocationBuilding:
+      type: object
+      properties:
+        buildingTypeCode:
+          type: integer
+          format: int32
+        utilizationCode:
+          type: integer
+          format: int32
+        completion:
+          type: string
+          format: date
+        constructionTypeCode:
+          type: string
+        builtupSpace:
+          type: number
+        numberOfApartments:
+          type: integer
+        numberOfFloors:
+          type: integer
+        floorArea:
+          type: number
+        sewerageConnectionCode:
+          type: integer
+          format: int32
+        gasConnectionCode:
+          type: integer
+          format: int32
+        waterSupplyConnectionCode:
+          type: integer
+          format: int32
+        elevatorTypeCode:
+          type: integer
+          format: int32
+        builtupArea:
+          type: number
+        heatingMethodCode:
+          type: integer
+          format: int32
+        ruianCode:
+          type: integer
+          format: int64
+    LocationRiskZones:
+      type: object
+      properties:
+        burglaryRisk:
+          type: integer
+          format: int32
+        robberyRisk:
+          type: integer
+          format: int32
+        windstormRisk:
+          type: integer
+          format: int32
+        floodRisk:
+          type: integer
+          format: int32
+        valid:
+          type: string
+        ruianCode:
+          type: integer
+          format: int64
+    LocationAddressPart:
+      type: object
+      properties:
+        ruianCode:
+          type: integer
+          format: int64
+        name:
+          type: string
+    Taxation:
+      required:
+        - tkCode
+      properties:
+        tkCode:
+          minLength: 1
+          type: string
+      description: Taxační kód
+    ContractAttribute:
+      required:
+        - code
+      properties:
+        code:
+          minLength: 1
+          type: string
+        valueInt:
+          type: integer
+        valueNumber:
+          type: number
+        valueString:
+          type: string
+        valueBoolean:
+          type: boolean
+        valueDate:
+          type: string
+          format: date
+        valueDateTime:
+          type: string
+          description: UTC Datum a čas ve formátu YYYY-mm-DD`T`HH:MM:SS
+          format: datetime
+      description: Doplňující atribut contractu
+    OneClick:
+      properties:
+        mainBuildingType:
+          minLength: 1
+          type: string
+          description: Typ hlavní stavby
+        objectValue:
+          type: number
+          description: Pojistná hodnota hlavní stavby
+        householdType:
+          minLength: 1
+          type: string
+          description: Typ domácnosti
+        householdObjectValue:
+          type: number
+          description: Pojistná hodnota domácnosti
+        deductible:
+          minLength: 1
+          type: string
+          description: Spoluúčast
+        insuranceLimit:
+          type: number
+          description: Limit plnění
+      description: Údaje nastavení z oneClick
+    InsurerNotice:
+      properties:
+        insurerNoticeState:
+          type: boolean
+          description: >-
+            Příznak, zda existuje nesrovnalost mezi požadavky klienta a
+            nabízeným pojistěním
+        insurerNoticeText:
+          type: string
+          description: Text nesrovnalosti mezi požadavky klienta a nabízeným pojistěním
+      description: Údaje z dialogu upozornění pojistitele
+    Substitution:
+      properties:
+        substitutedPolicies:
+          type: array
+          description: nahrazované smlouvy
+          items:
+            $ref: '#/components/schemas/SubstitutedPolicy'
+        financialSettlement:
+          type: string
+          description: Typ vyrovnání
+        substitutionSettlementAccount:
+          type: string
+          description: účet pro vyrovnání
+      description: Náhrady smluv
+    SubstitutedPolicy:
+      properties:
+        substitutedPolicyNumber:
+          type: string
+          description: číslo nahrazované smlouvy
+        sourceSystem:
+          type: string
+          description: zdrojový systém
+        productCode:
+          type: string
+          description: kód produktu
+      description: Nahrazované smlouvy
+    SignMethodAttributes:
+      properties:
+        paymentUrl:
+          type: string
+          description: URL platby
+      description: Atributy podpisových metod
+    SignsResponse:
+      type: array
+      description: Seznam povolených metod podpisu
+      items:
+        $ref: '#/components/schemas/SignMethod'
+    SignMethod:
+      required:
+        - authorized
+        - available
+        - method
+        - reason
+      type: object
+      properties:
+        method:
+          type: string
+          description: Název metody
+        authorized:
+          type: boolean
+          description: Příznak, zda je uživatel autorizován
+        available:
+          type: boolean
+          description: Příznak, zda je metoda technicky dostupná
+        reason:
+          type: string
+          description: Důvod nepřístupnosti metody
+      description: Struktura metody podpisu
+    ModelationRequest:
+      required:
+        - bpVariant
+        - code
+        - productRequest
+        - technicalProductCode
+        - version
+      type: object
+      properties:
+        code:
+          type: string
+        version:
+          type: string
+        bpVariant:
+          type: string
+          description: Business Product Variant
+        bpValidFrom:
+          type: string
+          format: date-time
+        technicalProductCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+        calculationType:
+          type: string
+          enum:
+            - STANDARD
+            - VARIANT
+        testValidation:
+          type: boolean
+        productRequest:
+          $ref: '#/components/schemas/ProductDefinitionRequest1'
+        calculationId:
+          type: string
+        newContract:
+          type: boolean
+        substitutedPoliciesRequest:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessProductSubstitution'
+      description: POJO s requestem modelace
+    ModelationDefinitionResponse:
+      type: object
+      properties:
+        calculationId:
+          type: string
+        status:
+          type: string
+        modelationResponseValidation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        modelationResponseLov:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lov'
+        substitutedPoliciesResponse:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubstitutedPoliciesResponse'
+        error:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    ModelationResponse:
+      required:
+        - code
+        - productRequest
+        - status
+        - technicalProductCode
+        - version
+      description: >-
+        POJO ve kterém je výsledek modelace, včetně statusu modelace, seznamu
+        vrácených nebo modifikovaných proměnných a seznamu validačních zpráv (
+        pokud nějaké jsou )
+      allOf:
+        - $ref: '#/components/schemas/ModelationDefinitionResponse'
+        - type: object
+          properties:
+            code:
+              type: string
+            version:
+              type: string
+            bpVariant:
+              type: string
+              description: >-
+                Business Product Variant, pokud není vyplněno, hledá se záznam s
+                pbVariant = null
+            technicalProductCode:
+              type: string
+            productResponse:
+              $ref: '#/components/schemas/ProductDefinitionResponse1'
+    ModelationResponseWS:
+      required:
+        - productRequest
+        - status
+      description: >-
+        POJO ve kterém je výsledek modelace, včetně statusu modelace, seznamu
+        vrácených nebo modifikovaných proměnných a seznamu validačních zpráv (
+        pokud nějaké jsou )
+      allOf:
+        - $ref: '#/components/schemas/ModelationDefinitionResponse'
+        - type: object
+          properties:
+            productResponse:
+              $ref: '#/components/schemas/ProductDefinitionResponseWS'
+    ProductModelationDefinitionRequest:
+      type: object
+      properties:
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString1'
+        productTemplate:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        insuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuranceLocation1'
+        productPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner1'
+        productDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge1'
+        insuredObject:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuredObject1'
+        subtotal:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtotalRequest1'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest1'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest1'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest1'
+        registeredBusinessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegisteredBusinessActivityRequest1'
+    ProductDefinitionRequest1:
+      allOf:
+        - $ref: '#/components/schemas/ProductModelationDefinitionRequest'
+        - type: object
+          properties:
+            version:
+              $ref: '#/components/schemas/FieldString1'
+            policy:
+              $ref: '#/components/schemas/PolicyBody1'
+    ProductDefinitionRequestWS:
+      allOf:
+        - $ref: '#/components/schemas/ProductModelationDefinitionRequest'
+        - type: object
+          properties:
+            policy:
+              $ref: '#/components/schemas/PolicyBodyWS'
+    ProductDefinitionProcessingCommonRequest:
+      allOf:
+        - $ref: '#/components/schemas/ProductDefinitionRequest1'
+        - type: object
+          properties:
+            businessProductCode:
+              type: string
+            businessProductVersion:
+              type: string
+            technicalProductCode:
+              type: string
+            bpVariant:
+              type: string
+    ModelationPolicyBody:
+      required:
+        - methodConcludingContract
+        - negotiationWay
+        - paymentFrequency
+        - paymentMethod
+        - proposalPresentationDate
+      type: object
+      properties:
+        proposalPresentationDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        proposalAcceptanceReminderDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        inceptionDateInput:
+          $ref: '#/components/schemas/FieldDatetime1'
+        terminationDateInput:
+          $ref: '#/components/schemas/FieldDatetime1'
+        conclusionDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        contractualDocumentationCreationDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        coveragePeriod:
+          $ref: '#/components/schemas/FieldCode1'
+        paymentFrequency:
+          $ref: '#/components/schemas/FieldCode1'
+        methodConcludingContract:
+          $ref: '#/components/schemas/FieldCode1'
+        arrangementType:
+          $ref: '#/components/schemas/FieldCode1'
+        negotiationWay:
+          $ref: '#/components/schemas/FieldCode1'
+        paymentMethod:
+          $ref: '#/components/schemas/FieldCode1'
+        fixationFromDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        automaticProlongation:
+          $ref: '#/components/schemas/FieldBoolean1'
+        indexation:
+          $ref: '#/components/schemas/FieldBoolean1'
+        variableInceptionDate:
+          $ref: '#/components/schemas/FieldBoolean1'
+        retroactiveInceptionDate:
+          $ref: '#/components/schemas/FieldBoolean1'
+        voucher:
+          $ref: '#/components/schemas/FieldCode1'
+        classifiedContractData:
+          $ref: '#/components/schemas/FieldBoolean1'
+        yearNumber:
+          $ref: '#/components/schemas/FieldNumber1'
+        targetGroup:
+          $ref: '#/components/schemas/FieldCode1'
+        premiumEmployerContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        delayPeriodTransferContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+    PolicyBody1:
+      allOf:
+        - required:
+            - methodConcludingContract
+            - negotiationWay
+            - paymentFrequency
+            - paymentMethod
+            - proposalPresentationDate
+        - $ref: '#/components/schemas/ModelationPolicyBody'
+        - type: object
+          properties:
+            arrangementChannel:
+              $ref: '#/components/schemas/FieldCode1'
+    PolicyBodyWS:
+      allOf:
+        - required:
+            - methodConcludingContract
+            - negotiationWay
+            - paymentFrequency
+            - paymentMethod
+            - proposalPresentationDate
+        - $ref: '#/components/schemas/ModelationPolicyBody'
+        - type: object
+    Premium31:
+      allOf:
+        - $ref: '#/components/schemas/Premium'
+        - required:
+            - calculatedPremiumDelta
+            - calculatedPremiumEntityDiscountDelta
+          type: object
+          properties:
+            calculatedPremiumBeforeEntityDiscount:
+              type: number
+            calculatedPremiumAfterEntityDiscount:
+              type: number
+            proposalAcceptancePremium:
+              type: number
+            calculatedPremiumDelta:
+              type: number
+            calculatedPremiumEntityDiscountDelta:
+              type: number
+            annualPremiumDelta:
+              type: number
+            aliquotPremiumDelta:
+              type: number
+    DiscountSurcharge1:
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        selectedValue:
+          $ref: '#/components/schemas/FieldNumber1'
+        selectedValuePercent:
+          $ref: '#/components/schemas/FieldNumber1'
+        businessDefinedDiscount:
+          type: string
+    InsuranceLocation1:
+      required:
+        - code
+        - uuid
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        locationSpecification:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSpecification1'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest1'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest1'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest1'
+    InsuranceLocationResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        locationSpecification:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSpecification1'
+        insuranceLocationLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse1'
+        sumAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    LocationSpecification1:
+      required:
+        - code
+        - uuid
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    ProductPartner1:
+      required:
+        - partnerRole
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        partnerRole:
+          minLength: 1
+          type: string
+        businessPartnerCode:
+          $ref: '#/components/schemas/FieldString1'
+        businessAuthorization:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessAuthorizationRequest1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        characteristics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        gradings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        businessPartnerVersion:
+          $ref: '#/components/schemas/FieldString1'
+    ProductPartnerResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        businessPartnerCode:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorization:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessAuthorizationResponse1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        characteristics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        gradings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        businessPartnerVersion:
+          $ref: '#/components/schemas/FieldValidationResult'
+    InsuredObject1:
+      required:
+        - code
+        - uuid
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        superiorLinkUuid:
+          $ref: '#/components/schemas/FieldString1'
+        indexation:
+          $ref: '#/components/schemas/FieldBoolean1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        relatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner1'
+        businessRiskPackage:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPackage1'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRisk1'
+        objectInsuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuredObjectLocation1'
+        insuredObjectDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge1'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest1'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest1'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityRequest1'
+    InsuredObjectLocation1:
+      required:
+        - code
+        - locationLinkUuid
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        locationLinkUuid:
+          type: string
+          format: uuid
+    BusinessRiskPackage1:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        packageRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskPackage1'
+        businessRiskPackageDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    RiskPackage1:
+      required:
+        - businessRiskCode
+      type: object
+      properties:
+        businessRiskCode:
+          minLength: 1
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    BusinessRisk1:
+      required:
+        - businessRiskCode
+      type: object
+      properties:
+        businessRiskCode:
+          minLength: 1
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        businessRiskDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurcharge1'
+        businessRiskRelatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartner1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementRequest1'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementRequest1'
+    Field1:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          minLength: 1
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    FieldString1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              type: string
+              description: Hodnota pole jako string
+    FieldCode1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              minLength: 1
+              type: string
+              description: Hodnota pole jako code z číselníku
+    FieldBoolean1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              type: boolean
+              description: Hodnota pole jako celé boolean
+    FieldInteger1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              type: integer
+              description: Hodnota pole jako celé číslo
+    FieldNumber1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              type: number
+              description: Hodnota pole jako desetinné číslo
+    FieldDatetime1:
+      allOf:
+        - $ref: '#/components/schemas/Field1'
+        - required:
+            - value
+          type: object
+          properties:
+            value:
+              type: string
+              description: Hodnota pole jako datum a čas
+              format: date-time
+    FieldWithFID1:
+      required:
+        - id
+        - type
+        - value
+      type: object
+      properties:
+        fid:
+          minLength: 1
+          type: string
+          description: ID pole pro sjednávač bez tečkové notace
+        id:
+          minLength: 1
+          type: string
+          description: ID pole s tečkovou notací pro kalkulačku
+        type:
+          type: string
+          enum:
+            - string
+            - integer
+            - number
+            - boolean
+            - lov
+            - datetime
+            - date
+        value:
+          $ref: '#/components/schemas/FieldWithIdValue1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    ProductModelationDefinitionResponse:
+      type: object
+      properties:
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        insuredObject:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectResponse1'
+        premium:
+          $ref: '#/components/schemas/Premium31'
+        productPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse1'
+        insuranceLocation:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuranceLocationResponse1'
+        productLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+        attachment:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        subtotal:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtotalResponse1'
+        productDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse1'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse1'
+        registeredBusinessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegisteredBusinessActivityResponse1'
+        sumAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        productTextCatalogue:
+          type: array
+          items:
+            type: string
+    ProductDefinitionResponse1:
+      allOf:
+        - $ref: '#/components/schemas/ProductModelationDefinitionResponse'
+        - type: object
+          properties:
+            version:
+              $ref: '#/components/schemas/FieldString1'
+            policy:
+              $ref: '#/components/schemas/PolicyResponse1'
+    ProductDefinitionResponseWS:
+      allOf:
+        - $ref: '#/components/schemas/ProductModelationDefinitionResponse'
+        - type: object
+          properties:
+            policy:
+              $ref: '#/components/schemas/PolicyResponseWS'
+    ModelationPolicyResponse:
+      type: object
+      properties:
+        proposalPresentationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        inceptionDateInput:
+          $ref: '#/components/schemas/FieldValidationResult'
+        inceptionDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        terminationDateInput:
+          $ref: '#/components/schemas/FieldValidationResult'
+        terminationDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        proposalAcceptanceDeadline:
+          $ref: '#/components/schemas/FieldDatetime1'
+        legislationVersion:
+          $ref: '#/components/schemas/FieldCode1'
+        annualDay:
+          $ref: '#/components/schemas/FieldNumber1'
+        annualMonth:
+          $ref: '#/components/schemas/FieldNumber1'
+        conclusionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        contractualDocumentationCreationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        coveragePeriod:
+          $ref: '#/components/schemas/FieldValidationResult'
+        paymentFrequency:
+          $ref: '#/components/schemas/FieldValidationResult'
+        methodConcludingContract:
+          $ref: '#/components/schemas/FieldValidationResult'
+        arrangementType:
+          $ref: '#/components/schemas/FieldValidationResult'
+        negotiationWay:
+          $ref: '#/components/schemas/FieldValidationResult'
+        paymentMethod:
+          $ref: '#/components/schemas/FieldValidationResult'
+        fixationFromDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        automaticProlongation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        indexation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        variableInceptionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        retroactiveInceptionDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        voucher:
+          $ref: '#/components/schemas/FieldValidationResult'
+        classifiedContractData:
+          $ref: '#/components/schemas/FieldValidationResult'
+        yearNumber:
+          $ref: '#/components/schemas/FieldValidationResult'
+        targetGroup:
+          $ref: '#/components/schemas/FieldValidationResult'
+        taxAllowancesPolicy:
+          $ref: '#/components/schemas/FieldBoolean1'
+        coveragePeriodOutput:
+          $ref: '#/components/schemas/FieldCode1'
+        premiumEmployerContracted:
+          $ref: '#/components/schemas/FieldValidationResult'
+        delayPeriodTransferContracted:
+          $ref: '#/components/schemas/FieldValidationResult'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        obligationContractPublication:
+          $ref: '#/components/schemas/FieldBoolean1'
+        proposalAcceptanceReminderDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+    PolicyResponse1:
+      allOf:
+        - $ref: '#/components/schemas/ModelationPolicyResponse'
+        - type: object
+        - properties:
+            arrangementChannel:
+              $ref: '#/components/schemas/FieldValidationResult'
+    PolicyResponseWS:
+      allOf:
+        - $ref: '#/components/schemas/ModelationPolicyResponse'
+        - type: object
+    ObjectResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        superiorLinkUuid:
+          $ref: '#/components/schemas/FieldValidationResult'
+        indexation:
+          $ref: '#/components/schemas/FieldValidationResult'
+        version:
+          $ref: '#/components/schemas/FieldString1'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        premium:
+          $ref: '#/components/schemas/Premium2'
+        businessRiskPackage:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskPackageResponse1'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskResponse1'
+        insuredObjectDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse1'
+        insuredObjectLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        attachment:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        relatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse1'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        businessActivity:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessActivityResponse1'
+        sumAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        productTextCatalogue:
+          type: array
+          items:
+            type: string
+    BusinessRiskResponse1:
+      type: object
+      properties:
+        businessRiskCode:
+          type: string
+        validFrom:
+          $ref: '#/components/schemas/FieldDatetime1'
+        validTo:
+          $ref: '#/components/schemas/FieldDatetime1'
+        territorialValidityLargeArea:
+          $ref: '#/components/schemas/FieldCode1'
+        version:
+          $ref: '#/components/schemas/FieldString1'
+        groupTariffVersion:
+          $ref: '#/components/schemas/FieldString1'
+        businessRiskRelatedPartner:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductPartnerResponse1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        premium:
+          $ref: '#/components/schemas/Premium2'
+        businessRiskDecomposition:
+          type: array
+          items:
+            $ref: '#/components/schemas/ElementaryRiskResponse1'
+        businessRiskLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+        businessRiskDiscountSurcharge:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountSurchargeResponse1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        staticDoc:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaticDocResponse'
+        specialAgreement:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialAgreementResponse'
+        freeAgreement:
+          $ref: '#/components/schemas/FreeAgreementResponse'
+        sumAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    DiscountSurchargeResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        calculatedValue:
+          $ref: '#/components/schemas/FieldNumber1'
+        calculatedValuePercent:
+          $ref: '#/components/schemas/FieldNumber1'
+        discountMinimumPremium:
+          $ref: '#/components/schemas/FieldNumber1'
+        aliquotDiscount:
+          type: number
+        calculatedDiscount:
+          type: number
+        annualDiscount:
+          type: number
+        selectedValue:
+          $ref: '#/components/schemas/FieldValidationResult'
+        selectedValuePercent:
+          $ref: '#/components/schemas/FieldValidationResult'
+        bonusSchemeLevel:
+          $ref: '#/components/schemas/FieldNumber1'
+        entitledDiscount:
+          $ref: '#/components/schemas/FieldBoolean1'
+    ElementaryRiskResponse1:
+      type: object
+      properties:
+        elementaryRiskCode:
+          type: string
+        premium:
+          $ref: '#/components/schemas/Premium'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        deductible:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeductibleResponse1'
+        businessRiskDecompositionLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+        taxAllowancesElementaryRisk:
+          $ref: '#/components/schemas/FieldCode1'
+        layer:
+          type: array
+          items:
+            $ref: '#/components/schemas/LayerResponse1'
+    DeductibleResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        calcDeductibleValue:
+          $ref: '#/components/schemas/FieldNumber1'
+        calcDeductibleValuePercent:
+          $ref: '#/components/schemas/FieldNumber1'
+        minAmount:
+          $ref: '#/components/schemas/FieldNumber1'
+        maxAmount:
+          $ref: '#/components/schemas/FieldNumber1'
+        deductibleApplicationCondition:
+          $ref: '#/components/schemas/FieldBoolean1'
+    LimitResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        calcLimitValue:
+          $ref: '#/components/schemas/FieldNumber1'
+        limitDynamics:
+          $ref: '#/components/schemas/FieldString1'
+        limitApplicationCondition:
+          $ref: '#/components/schemas/FieldBoolean1'
+        exclusion:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExclusionResponse'
+    BusinessRiskPackageResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        premium:
+          $ref: '#/components/schemas/Premium'
+        packageRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskPackage1'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskResponse1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    SubtotalRequest1:
+      type: object
+      properties:
+        subtotalUuid:
+          type: string
+          format: uuid
+        entityType:
+          minLength: 1
+          type: string
+        entityUuid:
+          type: array
+          items:
+            type: string
+            format: uuid
+    SubtotalResponse1:
+      type: object
+      properties:
+        subtotalUuid:
+          type: string
+          format: uuid
+        premium:
+          $ref: '#/components/schemas/Premium2'
+    FieldWithIdValue1:
+      type: object
+      properties:
+        currency:
+          type: string
+          description: měna (CZK, USD, EUR, ...)
+        valueString:
+          type: string
+          description: řetězec
+        valueInteger:
+          type: integer
+          description: celé číslo
+          format: int32
+        valueNumber:
+          type: number
+          description: desetinné číslo, interně obvykle implementováno jako BigDecimal
+          format: double
+          example: 3.1415
+        valueBoolean:
+          type: boolean
+          description: boolean hodnota
+        valueDatetime:
+          type: string
+          description: datum a čas
+          format: date-time
+          example: '2023-08-28T10:34:56.000Z'
+        valueDate:
+          type: string
+          description: datum
+          format: date
+          example: '2023-08-28T00:00:00.000Z'
+        code:
+          minLength: 1
+          type: string
+          description: Kód z číselníku
+      description: hodnota dynamickeho atributu
+    SpecialAgreementRequest1:
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    FreeAgreementRequest1:
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        text:
+          type: string
+        isContracted:
+          $ref: '#/components/schemas/FieldBoolean1'
+    BusinessActivityRequest1:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '123456'
+        uuid:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        businessActivityKey:
+          $ref: '#/components/schemas/FieldString1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    BusinessActivityResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '123456'
+        uuid:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        businessActivityKey:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessActivityKeyOutput:
+          $ref: '#/components/schemas/FieldString1'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+    LayerResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        layerType:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        layerNumber:
+          type: number
+        determinationDate:
+          type: string
+          format: date-time
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+        delayPeriodStartFrom:
+          type: string
+          format: date-time
+        validFromTechnical:
+          type: string
+          format: date-time
+        technicalSumInsured:
+          type: number
+        sumInsured:
+          type: number
+        healthStatusChargePercent:
+          type: number
+        premium:
+          $ref: '#/components/schemas/Premium'
+        healthStatusCharge:
+          type: number
+        entryReserve:
+          type: number
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWithFID1'
+        layerLimit:
+          type: array
+          items:
+            $ref: '#/components/schemas/LimitResponse1'
+    WsContractRequestCommon:
+      required:
+        - context
+        - product
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductDefinitionRequestWS'
+        agentRoles:
+          type: array
+          description: Role získatelů
+          items:
+            $ref: '#/components/schemas/AgentRoleWS'
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartnerWS'
+        locations:
+          $ref: '#/components/schemas/LocationsWS'
+        context:
+          $ref: '#/components/schemas/ContextWS'
+        additionalInformation:
+          $ref: '#/components/schemas/AdditionalInformation'
+      description: Internal common object for contract processing
+    WsContractRequest:
+      description: Request na kalkulaci smlouvy
+      allOf:
+        - $ref: '#/components/schemas/WsContractRequestCommon'
+    WsContractCompletionRequest:
+      description: Request na kompletaci smlouvy
+      allOf:
+        - $ref: '#/components/schemas/WsContractRequestCommon'
+    WsContractProcessingCommon:
+      required:
+        - product
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductDefinitionProcessingCommonRequest'
+        agentRoles:
+          type: array
+          description: Role získatelů
+          items:
+            $ref: '#/components/schemas/AgentRoleCommon'
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartnerProcessing'
+        locations:
+          $ref: '#/components/schemas/Locations'
+        context:
+          $ref: '#/components/schemas/ContextWS'
+        additionalInformation:
+          $ref: '#/components/schemas/AdditionalInformation'
+      description: Internal common object for contract completion processing
+    BusinessPartnerCommon:
+      type: object
+      properties:
+        partnerLinkUuid:
+          type: string
+          description: Vazba partnera
+          format: uuid
+        partnerCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód partnera
+        versionUuid:
+          type: string
+          description: UUID udentifikator
+          format: uuid
+        nationalities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Nationality1'
+        partnerType:
+          type: string
+        personIdentification:
+          $ref: '#/components/schemas/PersonIdentification1'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentWS'
+        legalEntityIdentification:
+          $ref: '#/components/schemas/LegalEntityIdentification1'
+        emails:
+          type: array
+          description: E-mailové adresy osoby
+          items:
+            $ref: '#/components/schemas/EmailWS'
+        phones:
+          type: array
+          description: Telefonní čísla osoby
+          items:
+            $ref: '#/components/schemas/Phone1'
+        databoxes:
+          type: array
+          description: Datové schránky partnera
+          items:
+            type: string
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Consent1'
+      description: Partner
+    BusinessPartnerProcessing:
+      type: object
+      description: Partner
+      allOf:
+        - $ref: '#/components/schemas/BusinessPartnerCommon'
+        - properties:
+            addresses:
+              type: array
+              description: Adresy
+              items:
+                $ref: '#/components/schemas/AddressWS'
+            versionUuid:
+              type: string
+              description: UID verze partnera
+              format: uuid
+    BusinessPartnerWS:
+      required:
+        - partnerType
+      type: object
+      description: Partner
+      allOf:
+        - $ref: '#/components/schemas/BusinessPartnerCommon'
+        - properties:
+            addresses:
+              type: array
+              description: Adresy
+              items:
+                $ref: '#/components/schemas/AddressWS'
+    ContextWS:
+      required:
+        - agentCode
+        - arrangementChannel
+        - bpVariant
+        - businessProductCode
+        - userId
+        - version
+      type: object
+      properties:
+        businessProductCode:
+          type: string
+          description: Business kód produktu
+        businessProductVersion:
+          type: string
+          description: Verze produktu
+        userId:
+          type: integer
+          description: Id uživatele
+          format: int32
+        agentCode:
+          type: string
+          description: Kód agenta
+        requiredDocument:
+          type: string
+          description: požadovaný dokument
+        bpVariant:
+          type: string
+          description: Business Product Variant
+        arrangementChannel:
+          type: string
+      description: Údaje z WS contextu
+    AdditionalInformation:
+      type: object
+      properties:
+        saveToSummary:
+          type: boolean
+        contractId:
+          type: integer
+          format: int32
+      description: Additional information to product
+    DocumentFile:
+      type: object
+      properties:
+        documentCode:
+          type: string
+          description: Kód dokumentu
+        documentName:
+          type: string
+          description: Název dokumentu
+        documentId:
+          type: string
+          description: ID dokumentu
+          format: $uuid
+        fileName:
+          type: string
+          description: Název souboru
+        mimeType:
+          type: string
+          description: MIME typ souboru
+        fileUrl:
+          type: string
+          description: URL na online podobu dokument
+    ModelationDocumentFile:
+      allOf:
+        - $ref: '#/components/schemas/DocumentFile'
+        - description: soubor dokumentu
+        - type: object
+        - required:
+            - documentCode
+            - documentId
+            - documentName
+            - fileName
+            - fileUrl
+            - mimeType
+    ContractDocumentFile1:
+      allOf:
+        - $ref: '#/components/schemas/DocumentFile'
+        - description: soubor dokumentu smlouvy
+        - type: object
+        - required:
+            - documentCode
+            - documentId
+            - documentName
+    WsContractResponse:
+      required:
+        - productResponse
+      type: object
+      properties:
+        contractId:
+          type: integer
+          description: Id návrhu smlouvy
+        productResponse:
+          $ref: '#/components/schemas/ModelationResponseWS'
+        documentFile:
+          $ref: '#/components/schemas/ModelationDocumentFile'
+      description: Odpověd na kalkulaci
+    WsContractCompletionResponse:
+      type: object
+      properties:
+        validations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+        contractId:
+          type: integer
+          description: Id návrhu smlouvy
+      description: Odpověd kompletace kontraktu
+      allOf:
+        - $ref: '#/components/schemas/ContractCompletionResponse'
+    nopsRequest:
+      required:
+        - justification
+        - lovCode
+        - state
+      type: object
+      properties:
+        lovCode:
+          type: string
+          example: 'N'
+        email2:
+          type: string
+          description: Druhý email uživatele
+          format: email
+          example: franta@vomacka.cz
+        skipRegional:
+          type: boolean
+          description: Odeslání GŘ
+          example: true
+        justification:
+          maxLength: 65535
+          type: string
+          description: Textové odůvodnění žádosti
+          example: Prosím o schválení vzhledem k přiloženému dokumentu
+        selfApproval:
+          type: boolean
+          description: Samoschválení
+          example: true
+        dueDate:
+          type: string
+          format: date-time
+          example: '2025-01-28T16:30:00.000Z'
+        record:
+          type: array
+          items:
+            $ref: '#/components/schemas/nopsRecord'
+      description: >-
+        Request na založení NOPu, obálka pro všechny NOP validace v rámci
+        žádosti
+    nopsRecord:
+      required:
+        - attributeName
+        - attributeValue
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          example: VA00168
+        validationMessage:
+          type: string
+          example: PRO PEP je potřeba schválit.
+        attributeName:
+          type: string
+          example: isPep
+        attributeValue:
+          type: string
+          example: 'true'
+      description: Instance jednoho konkrétního NOPu(validace z runModelation)
+    nopContractSetStatus:
+      required:
+        - status
+      type: object
+      properties:
+        status:
+          type: string
+          description: >-
+            Číselníkové hodnoty se budou plnit na vstupu podle toho, jaký stav
+            se má nastavit. Vstupní hodnota z lov_contract_nbc_state.code
+          example: A
+          enum:
+            - 'N'
+            - A
+            - D
+            - DA
+            - W
+            - C
+            - AA
+            - CA
+      description: Set NOP or contract status
+    NopStatus:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          description: Kód stavu z číselníku lov_contract_nbc.code
+          example: A
+        title:
+          type: string
+          description: Title který prezentuje kód stavu
+          example: Schválený
+        justification:
+          maxLength: 65535
+          type: string
+          description: Textové odůvodnění žádosti
+          example: Prosím o schválení vzhledem k přiloženému dokumentu
+        email2:
+          type: string
+          description: Druhý email uživatele
+          format: email
+          example: franta@vomacka.cz
+        selfApproval:
+          type: boolean
+          description: Samoschválení
+          example: true
+        skipRegional:
+          type: boolean
+          description: Odeslání GŘ
+          example: true
+        justificationTasklistResp:
+          type: string
+          description: Zdůvodnění tasklistu
+          example: Text zdůvodnění
+        nopId:
+          type: integer
+          description: Id NOPu
+          format: int32
+      description: Struktura vráceného stavu NOPu
+    CreateUpdateNopStatus:
+      required:
+        - contractState
+      type: object
+      properties:
+        contractState:
+          type: string
+          description: Kód stavu z číselníku lov_contract_state.code
+          example: KQ
+      description: Vráti stav kontraktu po vytvorení NOP
+    NopReportResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          description: HTML report NOPu
+      description: NOP report
+    PostAttachmentRequest:
+      required:
+        - documentAreaCode
+        - documentId
+        - documentTypeCode
+        - fileName
+        - mimetype
+      type: object
+      properties:
+        contractId:
+          type: integer
+          format: int32
+        idObjContractNbc:
+          type: integer
+          format: int32
+        insuredObjectId:
+          type: string
+          format: uuid
+          example: 41541b85-f306-409c-9142-6d020b3ed7fa
+        documentId:
+          type: string
+          format: uuid
+          example: 41541b85-f306-409c-9142-6d020b3ed7fa
+        documentTypeCode:
+          type: string
+          example: H041
+        documentAreaCode:
+          type: string
+          example: POJ_SML
+        fileName:
+          type: string
+          example: vinkulace.pdf
+        mimetype:
+          type: string
+          example: application/pdf
+    PutAttachmentRequest:
+      required:
+        - documentAreaCode
+        - documentId
+        - documentStatusValid
+        - documentTypeCode
+        - fileName
+        - mimetype
+      type: object
+      properties:
+        insuredObjectId:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        documentTypeCode:
+          type: string
+          example: H041
+        documentAreaCode:
+          type: string
+          example: POJ_SML
+        fileName:
+          type: string
+          example: vinkulace.pdf
+        mimetype:
+          type: string
+          example: application/pdf
+        documentStatusValid:
+          type: boolean
+          example: true
+        hiscomCreateDate:
+          type: string
+          format: date-time
+          example: '2024-02-06T09:00:00.000Z'
+        hiscomUploadStatus:
+          type: boolean
+          example: true
+    GetAttachmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        contractId:
+          type: integer
+          format: int32
+        insuredObjectId:
+          type: string
+          format: uuid
+        idObjContractNbc:
+          type: integer
+          format: int32
+        documentId:
+          type: string
+          format: uuid
+        documentTypeCode:
+          type: string
+          example: H041
+        documentAreaCode:
+          type: string
+          example: POJ_SML
+        fileName:
+          type: string
+          example: vinkulace.pdf
+        mimetype:
+          type: string
+          example: application/pdf
+        userId:
+          type: integer
+          example: 47294
+        documentStatusValid:
+          type: boolean
+          example: true
+        techCreateDate:
+          type: string
+          format: date-time
+          example: '2024-02-06T09:00:00.000Z'
+    GetMeetingRecordResponse:
+      required:
+        - meetingRecord
+      type: object
+      properties:
+        meetingRecord:
+          $ref: '#/components/schemas/GetMeetingRecord'
+      description: Odpověď na získaní dat k záznamu sjednání kontraktu
+    GetMeetingRecord:
+      required:
+        - consents
+        - insuranceLocationMeetRec
+      type: object
+      properties:
+        competitionAnalysis:
+          $ref: '#/components/schemas/CompetitionAnalysis'
+        insuranceLocationMeetRec:
+          type: array
+          description: místo pojištění
+          items:
+            $ref: '#/components/schemas/GetInsuranceLocationMeetRec'
+        consents:
+          type: array
+          description: Prohlášení ZzJ
+          items:
+            $ref: '#/components/schemas/Consents'
+      description: záznam z jednání smlouvy
+    CompetitionAnalysis:
+      type: object
+      properties:
+        freetext:
+          type: string
+          description: volné pole v sekci analýta konkurenčních produktů
+      description: analýza konkurenčních produktů pro nevýhradní získatele - KOOP
+    GetInsuranceLocationMeetRec:
+      type: object
+      properties:
+        locationLinkUuid:
+          type: string
+          description: >-
+            Unikátní identifikátor místa pojištění Uuid pro propojení s
+            insuranceLocation
+          format: uuid
+        requirementPreferencesGoals:
+          type: object
+          properties:
+            autotext:
+              type: array
+              description: needitovatelné textace ZzJ vytvořené na BE
+              items:
+                type: string
+            freetext:
+              type: array
+              description: volné pole pro psaní komentářů k ZzJ
+              items:
+                type: string
+          description: sekce potřeb, požadavků a cílů
+        recommendation:
+          type: object
+          properties:
+            autotext:
+              type: array
+              description: needitovatelné textace ZzJ vytvořené na BE
+              items:
+                type: string
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+            additionalText:
+              type: string
+              description: dodatečný needitovatelný text k ZzJ
+          description: sekce doporučení
+        justification:
+          type: object
+          properties:
+            autotext:
+              type: array
+              description: needitovatelné textace ZzJ vytvořené na BE
+              items:
+                type: string
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce zdůvodnění nesouhladu
+        additionalInfo:
+          type: object
+          properties:
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce dodatečních informací
+      description: vyhodnocené místo pojištění v rámci ZzJ
+    Consents:
+      required:
+        - type
+        - value
+      type: object
+      properties:
+        type:
+          type: string
+          description: >-
+            Typ prohlášení spojen s textací z číselníku
+            lov_meeting_record_consents
+          example: '1'
+          enum:
+            - '1'
+            - '2'
+        value:
+          type: boolean
+          description: Hodnota prohlášení. True znamená udělení, false neudělení souhlasu.
+      description: Prohlášení v ZzJ
+    PostMeetingRecordRequest:
+      required:
+        - meetingRecord
+      type: object
+      properties:
+        meetingRecord:
+          type: array
+          description: záznam z jednání smlouvy
+          items:
+            $ref: '#/components/schemas/PostMeetingRecord'
+      description: Požadavek na uložení ZzJ dat do SPO
+    PostMeetingRecord:
+      type: object
+      properties:
+        competitionAnalysis:
+          $ref: '#/components/schemas/CompetitionAnalysis'
+        insuranceLocationMeetRec:
+          type: array
+          description: místo pojištění
+          items:
+            $ref: '#/components/schemas/PostInsuranceLocationMeetRec'
+        consents:
+          type: array
+          description: Prohlášení ZzJ
+          items:
+            $ref: '#/components/schemas/Consents'
+      description: záznam z jednání smlouvy
+    PostInsuranceLocationMeetRec:
+      type: object
+      properties:
+        locationLinkUuid:
+          type: string
+          description: >-
+            Unikátní identifikátor místa pojištění Uuid pro propojení s
+            insuranceLocation
+          format: uuid
+        requirementPreferencesGoals:
+          type: object
+          properties:
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce potřeb, požadavků a cílů
+        recommendation:
+          type: object
+          properties:
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce doporučení
+        justification:
+          type: object
+          properties:
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce zdůvodnění nesouhladu
+        additionalInfo:
+          type: object
+          properties:
+            freetext:
+              type: string
+              description: volné pole pro psaní komentářů k ZzJ
+          description: sekce dodatečních informací
+      description: vyhodnocené místo pojištění v rámci ZzJ
+    SubstitutionResponse:
+      type: object
+      properties:
+        substitutedPolicyNumber:
+          type: string
+          description: číslo nahrazované smlouvy
+        sourceSystem:
+          type: string
+          description: zdrojový systém
+        productCode:
+          type: string
+          description: >-
+            na základě tohoto atributu FE potvrdí uživateli nahraditelnost
+            smlouvy
+        canBeSubstituted:
+          type: boolean
+          description: kód produktu
+        message:
+          type: string
+          description: chybová hláška
+      description: vyhodnocené náhrady
+    BusinessProductSubstitution:
+      required:
+        - code
+        - contractNumber
+        - policyHolderPartnerCode
+        - sourceSystemCode
+      type: object
+      properties:
+        contractNumber:
+          type: string
+          example: '1234567890'
+        code:
+          type: string
+          example: 1BT
+        sourceSystemCode:
+          type: string
+          enum:
+            - GOLEM
+            - ISIC
+            - NEURON
+        policyHolderPartnerCode:
+          type: string
+          example: 23800186
+        insuredObject:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuredObjectSubstitution'
+    InsuredObjectSubstitution:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          example: '333'
+        id:
+          type: string
+          example: IB00001
+        businessRisk:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRiskSubstitution'
+        location:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationSubstitution'
+    BusinessRiskSubstitution:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          example: '1011'
+    LocationSubstitution:
+      required:
+        - locationType
+      type: object
+      properties:
+        locationType:
+          type: string
+          example: LT1
+        street:
+          type: string
+          example: Pobřežní
+        houseNumber:
+          type: string
+          example: '911'
+        postalZipCode:
+          type: string
+          example: '18600'
+        municipality:
+          type: string
+          example: Praha
+        cadastralTerritoryId:
+          type: string
+          example: '12345678'
+        identificationNumber:
+          type: string
+          example: '7890'
+    RegisteredBusinessActivityRequest1:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        registeredBusinessActivityKey:
+          $ref: '#/components/schemas/FieldString1'
+        registeredBusinessActivityKeyTimestamp:
+          $ref: '#/components/schemas/FieldDatetime1'
+    RegisteredBusinessActivityResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        registeredBusinessActivityKey:
+          $ref: '#/components/schemas/FieldValidationResult'
+        registeredBusinessActivityKeyTimestamp:
+          $ref: '#/components/schemas/FieldValidationResult'
+    BusinessAuthorizationRequest1:
+      type: object
+      properties:
+        code:
+          type: string
+        businessAuthorizationKind:
+          $ref: '#/components/schemas/FieldCode1'
+        businessAuthorizationDate:
+          $ref: '#/components/schemas/FieldDatetime1'
+        businessAuthorizationExtId:
+          $ref: '#/components/schemas/FieldString1'
+        businessAuthorizationDescription:
+          $ref: '#/components/schemas/FieldString1'
+    BusinessAuthorizationResponse1:
+      type: object
+      properties:
+        code:
+          type: string
+        businessAuthorizationKind:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationDate:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationExtId:
+          $ref: '#/components/schemas/FieldValidationResult'
+        businessAuthorizationDescription:
+          $ref: '#/components/schemas/FieldValidationResult'
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/Validation'
+    ContractLightResponse:
+      type: object
+      properties:
+        contractNumber:
+          type: string
+          description: číslo pojistné smlouvy
+        contractState:
+          type: string
+          description: stav smlouvy
+        productTemplateCode:
+          type: string
+          description: šablobna produktu
+        idContract:
+          type: string
+          description: klíč kalkulace SPO
+        idAdmUser:
+          type: string
+          description: id uživatele - přihlášeného
+        agentCode:
+          type: string
+          description: kodzi získatele z přihlášeného vztahu (submitter)
+        businessPartners:
+          type: array
+          description: Partneři
+          items:
+            $ref: '#/components/schemas/BusinessPartnerLight'
+        modelationRequest:
+          $ref: '#/components/schemas/ModelationRequestLight'
+      description: Odpověd na získání dat o kontraktu
+    BusinessPartnerLight:
+      required:
+        - partnerCode
+        - partnerRole
+      type: object
+      properties:
+        partnerCode:
+          maxLength: 10
+          minLength: 1
+          type: string
+          description: Kód partnera
+        partnerRole:
+          type: string
+      description: Partner light verze
+    ModelationRequestLight:
+      required:
+        - code
+        - version
+      type: object
+      properties:
+        code:
+          minLength: 1
+          type: string
+        version:
+          minLength: 1
+          type: string
+        bpCodeGolem:
+          type: string
+        bpVariant:
+          type: string
+      description: POJO s requestem modelace
+    ContractPrintRequest:
+      type: object
+      properties:
+        communicationEventCode:
+          type: string
+          description: Typ komunikační události
+          example: CALPROP02
+      description: Požadavek na tisk
+    ContractPrintResponse:
+      type: object
+      properties:
+        documentId:
+          type: string
+        documentUrl:
+          type: string
+        fileName:
+          type: string
+        mimetype:
+          type: string
+          example: application/pdf
+      description: Odpověd na tisk contractu
+    ContractValidateFinalizationRequest:
+      required:
+        - subscriber
+      type: object
+      properties:
+        subscriber:
+          $ref: '#/components/schemas/ContractValidationSubscriber'
+        policyHolder:
+          $ref: '#/components/schemas/ContractValidationPolicyHolder'
+        submitter:
+          $ref: '#/components/schemas/ContractValidationSubmitter'
+      description: Data pro validaci
+    ContractValidationSubscriber:
+      required:
+        - birthDate
+        - firstName
+        - knzId
+        - kodzi
+        - permissions
+        - surname
+      type: object
+      properties:
+        knzId:
+          type: integer
+          format: int32
+        kodzi:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        surname:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        permissions:
+          type: array
+          items:
+            type: string
+      description: Získatel v roli subscriber
+    ContractValidationPolicyHolder:
+      required:
+        - birthDate
+        - firstName
+        - surname
+      type: object
+      properties:
+        firstName:
+          type: string
+        surname:
+          type: string
+        birthDate:
+          type: string
+          format: date
+      description: Pojistník
+    ContractValidationSubmitter:
+      required:
+        - kodzi
+        - permissions
+      type: object
+      properties:
+        kodzi:
+          type: integer
+          description: Přihlášený uživatel v kalkulačce - data z tokenu
+          format: int64
+        permissions:
+          type: array
+          description: Oprávnění přihlášeného uživatele v kalkulačce- data z tokenu
+          items:
+            type: string
+    ContractValidateFinalizationResponse:
+      type: object
+      properties:
+        validation:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractFinalizeValidation'
+      description: Validační hlášky z kontroly
+    ContractFinalizeValidation:
+      type: object
+      properties:
+        code:
+          type: string
+        result:
+          type: string
+          enum:
+            - error
+            - warning
+        message:
+          type: string
+      description: Validační hláška
   responses:
     BadRequest:
       description: Nevalidní požadavek
       headers:
         X-Correlation-Id:
-          $ref: '#/components/headers/X-Correlation-Id'
+          description: Korelační ID na vazbu mezi BE/FE v byznys procesu.
+          schema:
+            type: string
+            maxLength: 36
       content:
         application/json:
           schema:
@@ -4789,7 +8061,10 @@ components:
       description: Neautorizováno
       headers:
         X-Correlation-Id:
-          $ref: '#/components/headers/X-Correlation-Id'
+          description: Korelační ID na vazbu mezi BE/FE v byznys procesu.
+          schema:
+            type: string
+            maxLength: 36
       content:
         application/json:
           schema:
@@ -4802,6 +8077,45 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     InternalServerError:
       description: Chyba na serveru
+      headers:
+        X-Correlation-Id:
+          description: Korelační ID na vazbu mezi BE/FE v byznys procesu.
+          schema:
+            type: string
+            maxLength: 36
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidRequest:
+      description: Nevalidní požadavek
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized1:
+      description: Neautorizováno
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError1:
+      description: Chyba na straně serveru
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/X-Correlation-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ItemNotFound1:
+      description: Objekt nenalezen
       headers:
         X-Correlation-Id:
           $ref: '#/components/headers/X-Correlation-Id'
